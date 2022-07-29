@@ -6,11 +6,14 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 )
 
-func setup(t *testing.T, fileMap map[string]string) builder {
+type testFS = map[string]string
+
+func setup(t *testing.T, fileMap testFS) builder {
 	tmpDir := path.Join("/tmp/", fmt.Sprintf("%x", rand.Intn(100_000)))
 
 	for filePath, contents := range fileMap {
@@ -31,116 +34,378 @@ func setup(t *testing.T, fileMap map[string]string) builder {
 	})
 
 	return builder{
-		rootDir:  tmpDir,
-		pagesDir: tmpDir,
+		rootDir:      tmpDir,
+		pagesDir:     tmpDir,
+		outDir:       path.Join(tmpDir, "_site"),
+		templateFile: path.Join(tmpDir, "_template.html"),
 	}
 }
 
-func TestCrawlDirs(t *testing.T) {
-	b := setup(t, map[string]string{
-		"a/b/c.md": "# C",
-		"_d/e.md":  "#E",
-		"index.md": "root",
-		"e.js":     "console.log('e')",
-		"f/g.css":  "body {}",
+func (b *builder) findPageByPath(t *testing.T, p string) *Page {
+	for _, page := range b.pages {
+		if page.path == p {
+			return page
+		}
+	}
+
+	t.Fatalf(`expected page to exist "%s"`, p)
+	return nil
+}
+
+func TestBuild(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": "# Index",
 	})
 
-	b.scan()
-	actualDirs := b.dirs
-	expectDirs := []string{"/a", "/f", "/a/b"}
+	err := b.build()
 
-	if !reflect.DeepEqual(actualDirs, expectDirs) {
-		t.Errorf("\nexpected dirs: %v\n  actual dirs: %v", expectDirs, actualDirs)
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
+	}
+
+	if len(b.pages) != 1 {
+		t.Errorf("expected to build 1 page, not %d", len(b.pages))
+	}
+
+	if len(b.assets) > 0 {
+		t.Errorf("expected to copy zero assets, not %d", len(b.assets))
+	}
+
+	if _, err := os.Stat(b.outDir); err != nil {
+		t.Errorf("expected %s to have been created", b.outDir)
+	}
+
+	tabrJsPath := path.Join(b.outDir, "index.html")
+	indexHtmlContent, err := os.ReadFile(tabrJsPath)
+
+	if err != nil {
+		t.Errorf("expected %s to exist and be readable: %s", tabrJsPath, err)
+	}
+
+	search := "<h1>Index</h1>"
+	html := string(indexHtmlContent)
+	if !strings.Contains(html, search) {
+		t.Errorf(`expected file to contain "%s"`, search)
 	}
 }
 
-func TestCrawlPages(t *testing.T) {
-	b := setup(t, map[string]string{
-		"a/b/c.md": "# C",
-		"_d/e.md":  "# E",
-		"index.md": "root",
-		"e.js":     "console.log('e')",
-		"f/g.css":  "body {}",
+func TestBuildAssets(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": "# Index",
+		"tabr.js":  "alert('stilgar')",
 	})
 
-	b.scan()
+	err := b.build()
 
-	expectPages := []Page{
-		{
-			path:    "/index.md",
-			Name:    "index.md",
-			Url:     "/",
-			depth:   0,
-			outPath: "/index.html",
-		},
-		{
-			path:    "/a/b/c.md",
-			Name:    "c.md",
-			Url:     "/a/b/c.html",
-			outPath: "/a/b/c.html",
-			depth:   3,
-		},
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
 	}
 
-	actualPages := make([]Page, len(b.pages))
-
-	for i, page := range b.pages {
-		actualPages[i] = *page
+	if len(b.assets) != 1 {
+		t.Errorf("expected to copy 1 asset, not %d", len(b.assets))
 	}
 
-	if !reflect.DeepEqual(expectPages, actualPages) {
-		t.Errorf("\nexpected pages:%+v\n  actual pages:%+v", expectPages, actualPages)
+	tabrJsPath := path.Join(b.outDir, "tabr.js")
+	tabrJsContent, err := os.ReadFile(tabrJsPath)
+
+	if err != nil {
+		t.Errorf(`expected "%s" to exist and be readable: %s`, tabrJsPath, err)
+	}
+
+	actualContent := string(tabrJsContent)
+	expectedContent := "alert('stilgar')"
+
+	if actualContent != expectedContent {
+		t.Errorf(`expected "%s" to contain "%s", but found "%s"`, tabrJsPath, expectedContent, actualContent)
 	}
 }
 
-func TestCrawlPagesByDepth(t *testing.T) {
-	b := setup(t, map[string]string{
-		"a/b/c.md":     "# C",
-		"a/b/index.md": "# D",
-		"_d/e.md":      "# E",
-		"index.md":     "# Root",
+func TestIgnorePaths(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md":        "# Index",
+		"_nope.md":        "# Nope",
+		"_nested/nope.md": "# Nested Nope",
 	})
 
-	b.scan()
+	err := b.build()
 
-	expectPagesByDepth := [][]*Page{
-		{b.pages[0]},
-		{},
-		{b.pages[2]},
-		{b.pages[1]},
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
 	}
 
-	actualPagesByDepth := b.pagesByDepth
+	ignoredPaths := []string{
+		path.Join(b.outDir, "_nope.html"),
+		path.Join(b.outDir, "_nested/_nope.html"),
+	}
 
-	if !reflect.DeepEqual(expectPagesByDepth, actualPagesByDepth) {
-		t.Errorf("\nexpected pages: %+v\nactual pages: %+v", expectPagesByDepth, actualPagesByDepth)
+	for _, p := range ignoredPaths {
+		if _, err := os.Stat(p); err == nil {
+			t.Errorf("expected %s to be ignored", p)
+		}
 	}
 }
 
-func TestCrawlAssets(t *testing.T) {
-	b := setup(t, map[string]string{
-		"a/b/c.md": "# C",
-		"_d/e.md":  "# E",
-		"index.md": "# Root",
-		"e.js":     "console.log('e')",
-		"f/g.css":  "body {}",
-		"_h.js":    "console.log('h')",
+func TestFrontMatter(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": `---
+str: page
+num: 35
+text: |
+  hello
+---
+
+Cool!
+`,
 	})
 
-	b.scan()
+	err := b.build()
 
-	expectAssets := []Asset{
-		{Path: "/e.js"},
-		{Path: "/f/g.css"},
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
 	}
 
-	actualAssets := make([]Asset, len(b.assets))
+	p := b.pages[0]
 
-	for i, asset := range b.assets {
-		actualAssets[i] = *asset
+	tests := map[string]any{
+		"str":  "page",
+		"num":  35,
+		"text": "hello\n",
 	}
 
-	if !reflect.DeepEqual(expectAssets, actualAssets) {
-		t.Errorf("\nexpected assets: %+v\nactual assets: %+v", expectAssets, actualAssets)
+	for k, expected := range tests {
+		actual := p.Data[k]
+		if actual != expected {
+			t.Errorf(`expected "%s" to parse as "%v" but got "%v"`, k, expected, actual)
+		}
 	}
+}
+
+func TestLocalTemplates(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": `---
+id: tabr
+---
+
+<pre>{{ .Data.id }}</pre>
+`,
+	})
+
+	err := b.build()
+
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
+	}
+
+	p := b.pages[0]
+
+	searchHtml := "<pre>tabr</pre>"
+	actualHtml := p.Contents
+
+	if !strings.Contains(actualHtml, searchHtml) {
+		t.Errorf(`did not find "%s" in html %s%s`, searchHtml, "\n", actualHtml)
+	}
+}
+
+func TestPageUrls(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md":      ``,
+		"docs/index.md": ``,
+		"docs/help.md":  ``,
+	})
+
+	err := b.build()
+
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
+	}
+
+	tests := map[string]string{
+		"/index.md":      "/",
+		"/docs/index.md": "/docs/",
+		"/docs/help.md":  "/docs/help.html",
+	}
+
+	for p, url := range tests {
+		page := b.findPageByPath(t, p)
+		if page.Url != url {
+			t.Errorf(`page "%s" expected to have url "%s" but instead has "%s"`, p, url, page.Url)
+		}
+	}
+}
+
+func TestCustomTemplate(t *testing.T) {
+	indexMd := `
+---
+title: Fremmen
+---
+Secrecy`
+
+	templateHtml := `<h1>{{ .Data.title }}</h1>
+<main>{{ .Contents }}</main>`
+
+	b := setup(t, testFS{
+		"index.md":       indexMd,
+		"_template.html": templateHtml,
+	})
+
+	err := b.build()
+
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
+	}
+
+	p := b.findPageByPath(t, "/index.md")
+
+	actualHtml := p.Contents
+	expectedHtml := `<h1>Fremmen</h1>
+<main><p>Secrecy</p>
+</main>`
+
+	if actualHtml != expectedHtml {
+		t.Errorf("expected custom template to render:\n%s\nbut got\n%s", expectedHtml, actualHtml)
+	}
+}
+
+func TestTemplateDateFunc(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": `
+---
+oct10: 2022-10-10
+---
+<time>{{ date "2006-1-2" "Jan 2, 2006" .Data.oct10 }}</time>`,
+	})
+
+	err := b.build()
+
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
+	}
+
+	p := b.findPageByPath(t, "/index.md")
+
+	actualHtml := p.Contents
+	searchHtml := `<time>Oct 10, 2022</time>`
+
+	if !strings.Contains(actualHtml, searchHtml) {
+		t.Errorf(`did not find "%s" in html %s%s`, searchHtml, "\n", actualHtml)
+	}
+}
+
+func TestIndexPage(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": `
+---
+index: true
+---`,
+		"a.md":       "A",
+		"b.md":       "B",
+		"c/index.md": "C",
+	})
+
+	err := b.build()
+
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
+	}
+
+	p := b.findPageByPath(t, "/index.md")
+	html := p.Contents
+	expectedHrefs := []string{"/a.html", "/b.html", "/c/"}
+
+	for _, href := range expectedHrefs {
+		attr := fmt.Sprintf(`href="%s"`, href)
+		if !strings.Contains(html, attr) {
+			t.Errorf("expected %s to contain %s\n%s", p.outPath, attr, html)
+		}
+	}
+}
+
+func (b *builder) expectBuildError(t *testing.T, msg string, patterns []string) {
+	err := b.build()
+
+	if err == nil {
+		t.Errorf(msg)
+	}
+
+	message := err.Error()
+	failed := false
+
+	for _, pattern := range patterns {
+		ok, err := regexp.MatchString(pattern, message)
+
+		if !ok || err != nil {
+			t.Errorf("expected error to match /%s/.", pattern)
+			failed = true
+		}
+	}
+
+	if failed {
+		t.Log(message)
+	}
+}
+
+func TestYamlParseError(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": `
+---
+index: |
+		<- that is a tab
+---`,
+	})
+
+	b.expectBuildError(t, "expected yaml parsing to fail", []string{
+		"index.md:2",
+		"found a tab character where an indentation space is expected",
+		"\\^\\^\\^",
+	})
+}
+
+func TestPageTemplateParseError(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": `{{ hello }}`,
+	})
+
+	b.expectBuildError(t, "expected template parsing to fail", []string{
+		"index.md:1",
+		`function "hello" not defined`,
+		"\\^\\^\\^",
+	})
+}
+
+func TestPageTemplateEvaluation(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md": "{{ .Foo }}",
+	})
+
+	b.expectBuildError(t, "expected template evaluation to fail", []string{
+		"index.md:1",
+		`can't evaluate field Foo`,
+		"\\^\\^\\^",
+	})
+}
+
+func TestTemplateParseError(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md":       ``,
+		"_template.html": "{{hello}}",
+	})
+
+	b.expectBuildError(t, "expected template parsing to fail", []string{
+		"_template.html:1",
+		`function "hello" not defined`,
+		"\\^\\^\\^",
+	})
+}
+
+func TestTemplateEvaluation(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md":       ``,
+		"_template.html": "{{ .Woo }}",
+	})
+
+	b.expectBuildError(t, "expected template evaluation to fail", []string{
+		"_template.html:1",
+		`can't evaluate field Woo`,
+		"\\^\\^\\^",
+	})
 }

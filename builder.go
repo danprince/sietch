@@ -377,6 +377,8 @@ func (b *builder) buildPage(page *Page) error {
 		return errors.TemplateExecError(err, b.templateFile, string(defaultTemplateHtml), 0)
 	}
 
+	page.Contents = pageBuf.String()
+
 	// Finally, write to disk
 	err = os.WriteFile(path.Join(b.outDir, page.outPath), pageBuf.Bytes(), os.ModePerm)
 
