@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {{ if .Data.title }}
+      <title>{{ .Data.title }}</title>
+    {{ end }}
+    <style>
+body {
+  font: 1.2rem/1.8 Georgia, 'Times New Roman', serif;
+  padding: 2rem 0 8em 0;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  margin-bottom: 64px;
+}
+
+h1, h2, h3, h4, .sans {
+  font-family: 'Helvetica Neue', 'Arial Nova', Helvetica, Arial, sans-serif;
+}
+
+h1 {
+  margin-bottom: 0;
+}
+
+h2, h3, h4 {
+  margin-top: 2em;
+}
+
+pre, code {
+  font-family: Consolas, Menlo, Monaco, monospace;
+  font-size: 1.1rem;
+}
+
+pre {
+  border-radius: 4px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+main > pre {
+  margin-left: -12px;
+  border: solid 2px black;
+}
+
+img, svg {
+  max-width: 100%;
+}
+
+main > nav {
+  margin-top: 3em;
+  display: flex;
+  gap: 32px;
+}
+
+    </style>
+  </head>
+  <body>
+    <main>
+      {{ $home := home . }}
+
+      {{ if $home.Data.nav }}
+        <nav class="sans">
+          {{ range $name, $url := $home.Data.nav }}
+            <a href="{{$url}}">{{$name}}</a>
+          {{ end }}
+        </nav>
+      {{ end }}
+
+      {{ if .Data.title -}}
+        <h1>{{ .Data.title }}</h1>
+      {{- end }}
+
+      {{ if .Data.date -}}
+        <time class="sans">{{ .Data.date | date "2006-1-2" "Jan 2, 2006" }}</time>
+      {{- end }}
+
+      {{ .Contents }}
+
+      {{- if (eq .Data.index true) -}}
+        <ul>
+          {{- range (index .) -}}
+            <li>
+              <a href="{{- .Url -}}">
+                {{- .Data.title -}}
+              </a>
+            </li>
+          {{- end -}}
+        </ul>
+      {{- end -}}
+    </main>
+  </body>
+</html>
+
