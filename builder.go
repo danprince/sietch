@@ -48,8 +48,6 @@ type builder struct {
 	dirs []string
 	// All the pages in the site.
 	pages []*Page
-	// A nested slice of pages by directory depth.
-	pagesByDepth [][]*Page
 	// All non-page assets in the site.
 	assets []*Asset
 	// Configured markdown parser/renderer
@@ -80,7 +78,6 @@ type Asset struct {
 func (b *builder) reset() {
 	b.dirs = nil
 	b.pages = nil
-	b.pagesByDepth = nil
 	b.assets = nil
 }
 
@@ -187,10 +184,6 @@ func (b *builder) scan() error {
 				depth -= 1
 			}
 
-			for len(b.pagesByDepth) <= depth {
-				b.pagesByDepth = append(b.pagesByDepth, []*Page{})
-			}
-
 			page := Page{
 				Url:     url,
 				dir:     dir,
@@ -201,7 +194,6 @@ func (b *builder) scan() error {
 			}
 
 			b.pages = append(b.pages, &page)
-			b.pagesByDepth[depth] = append(b.pagesByDepth[depth], &page)
 		} else {
 			b.assets = append(b.assets, &Asset{Path: relPath})
 		}
@@ -211,47 +203,25 @@ func (b *builder) scan() error {
 }
 
 // Creates the default set of functions that will be available in any page
-// templates.
-func (b *builder) defaultTemplateFuncs() template.FuncMap {
+// templates. Functions that work with the file system will run as in the
+// `dir` directory.
+func (b *builder) templateFuncs(dir string) template.FuncMap {
 	return template.FuncMap{
 		"include": func(name string) string {
-			contents, err := os.ReadFile(name)
+			contents, err := os.ReadFile(path.Join(dir, name))
 			if err != nil {
 				return err.Error()
 			} else {
 				return string(contents)
 			}
 		},
-		"date": func(layout, format, date string) string {
-			t, err := time.Parse(layout, date)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, errors.FmtError(err))
-				return "Invalid date"
-			}
-			return t.Format(format)
-		},
-		"home": func(page *Page) *Page {
-			if page.Name == "index.md" {
-				return page
-			}
-			for _, p := range b.pagesByDepth[page.depth-1] {
-				if p.Name == "index.md" {
-					return p
-				}
-			}
-			return nil
-		},
-		"index": func(page *Page) []*Page {
+		"index": func() []*Page {
 			var siblings []*Page
-			depth := page.depth
 
-			if page.Name == "index.md" {
-				depth += 1
-			}
-
-			for _, other := range b.pagesByDepth[depth] {
-				if other.dir == page.dir || path.Dir(other.dir) == page.dir {
-					siblings = append(siblings, other)
+			// TODO: Slow: index pages by dir instead.
+			for _, page := range b.pages {
+				if page.dir == dir || (page.Name == "index.md" && path.Dir(page.dir) == dir) {
+					siblings = append(siblings, page)
 				}
 			}
 
@@ -314,7 +284,7 @@ func (b *builder) readTemplates() error {
 		b.templateFile = "template.html"
 	}
 
-	funcs := b.defaultTemplateFuncs()
+	funcs := b.templateFuncs(b.pagesDir)
 	template, err := template.New("template").Funcs(funcs).Parse(string(contents))
 
 	if err != nil {
@@ -418,7 +388,7 @@ func (b *builder) buildPages() error {
 func (b *builder) buildPage(page *Page) error {
 	// Parse and execute the page's own template
 	text := page.Contents
-	funcs := b.defaultTemplateFuncs()
+	funcs := b.templateFuncs(path.Join(b.pagesDir, page.dir))
 	tpl, err := template.New("page").Funcs(funcs).Parse(text)
 
 	if err != nil {
