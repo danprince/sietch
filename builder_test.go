@@ -82,10 +82,10 @@ func TestBuild(t *testing.T) {
 		t.Errorf("expected %s to exist and be readable: %s", tabrJsPath, err)
 	}
 
-	search := "<h1>Index</h1>"
+	search := `<h1 id="index">Index</h1>`
 	html := string(indexHtmlContent)
 	if !strings.Contains(html, search) {
-		t.Errorf(`expected file to contain "%s"`, search)
+		t.Errorf(`expected file to contain "%s" but got %s`, search, html)
 	}
 }
 
