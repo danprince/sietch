@@ -73,6 +73,20 @@ type Asset struct {
 	Path string
 }
 
+func builderWithDefaults(rootDir string) builder {
+	pagesDir := rootDir
+	outDir := path.Join(rootDir, "_site")
+	templateFile := path.Join(rootDir, "_template.html")
+	configFile := path.Join(rootDir, ".sietch.json")
+
+	return builder{
+		rootDir:      rootDir,
+		pagesDir:     pagesDir,
+		outDir:       outDir,
+		templateFile: templateFile,
+		configFile:   configFile,
+	}
+}
 // Reset the internal state of the builder to prevent memory leaks across
 // successive rebuilds.
 func (b *builder) reset() {

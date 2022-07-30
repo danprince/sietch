@@ -34,13 +34,7 @@ func setup(t *testing.T, fileMap testFS) builder {
 		os.RemoveAll(tmpDir)
 	})
 
-	return builder{
-		rootDir:      tmpDir,
-		pagesDir:     tmpDir,
-		outDir:       path.Join(tmpDir, "_site"),
-		templateFile: path.Join(tmpDir, "_template.html"),
-		configFile:   path.Join(tmpDir, ".sietch.json"),
-	}
+	return builderWithDefaults(tmpDir)
 }
 
 func (b *builder) findPageByPath(t *testing.T, p string) *Page {
