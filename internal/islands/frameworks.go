@@ -11,9 +11,11 @@ var React = Framework{
 	createRenderScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
 
-		script.WriteString("import React from 'react'\n")
-		script.WriteString("import { renderToString as render } from 'react-dom/server';\n")
-		script.WriteString("globalThis.$ = {};")
+		if ctx.needsSSR() {
+			script.WriteString("import React from 'react'\n")
+			script.WriteString("import { renderToString as render } from 'react-dom/server';\n")
+			script.WriteString("globalThis.$ = {};")
+		}
 
 		for id, el := range ctx.Elements {
 			if el.SSR {
@@ -35,8 +37,10 @@ var React = Framework{
 	createHydrateScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
 
-		script.WriteString("import React from 'react'\n")
-		script.WriteString("import { hydrate } from 'react-dom';\n")
+		if ctx.needsCSR() {
+			script.WriteString("import React from 'react'\n")
+			script.WriteString("import { hydrate } from 'react-dom';\n")
+		}
 
 		for id, el := range ctx.Elements {
 			if el.CSR {
@@ -51,6 +55,9 @@ var React = Framework{
 				renders := fmt.Sprintf("hydrate(React.createElement(%s, %s), %s);\n", id, string(props), element)
 				script.WriteString(imports)
 				script.WriteString(renders)
+			} else if el.SSR {
+				// Import SSR elements (but don't render) just in case they require CSS files
+				script.WriteString(fmt.Sprintf("import '%s';\n", el.entryPoint))
 			}
 		}
 
@@ -63,9 +70,11 @@ var Preact = Framework{
 	createRenderScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
 
-		script.WriteString("import { h } from 'preact'\n")
-		script.WriteString("import { render } from 'preact-render-to-string';\n")
-		script.WriteString("globalThis.$ = {};")
+		if ctx.needsSSR() {
+			script.WriteString("import { h } from 'preact'\n")
+			script.WriteString("import { render } from 'preact-render-to-string';\n")
+			script.WriteString("globalThis.$ = {};")
+		}
 
 		for id, el := range ctx.Elements {
 			if el.SSR {
@@ -87,7 +96,9 @@ var Preact = Framework{
 	createHydrateScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
 
-		script.WriteString("import { h, hydrate } from 'preact'\n")
+		if ctx.needsCSR() {
+			script.WriteString("import { h, hydrate } from 'preact'\n")
+		}
 
 		for id, el := range ctx.Elements {
 			if el.CSR {
@@ -102,6 +113,9 @@ var Preact = Framework{
 				renders := fmt.Sprintf("hydrate(h(%s, %s), %s);\n", id, string(props), element)
 				script.WriteString(imports)
 				script.WriteString(renders)
+			} else if el.SSR {
+				// Import SSR elements (but don't render) just in case they require CSS files
+				script.WriteString(fmt.Sprintf("import '%s';\n", el.entryPoint))
 			}
 		}
 

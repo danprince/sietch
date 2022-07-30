@@ -110,10 +110,6 @@ type RuntimeOptions struct {
 }
 
 func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
-	if !ctx.needsCSR() {
-		return runtime{}, nil
-	}
-
 	script, err := options.Framework.createHydrateScript(ctx)
 
 	if err != nil {
@@ -172,6 +168,12 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
 		case ".css":
 			links = append(links, src)
 		}
+	}
+
+	// Prevent any JavaScript making it down to the client if no elements
+	// requested a client side render.
+	if !ctx.needsCSR() {
+		scripts = []string{}
 	}
 
 	return runtime{
