@@ -23,3 +23,5 @@ go.work
 # Big benchmark dirs
 benchmarks/*
 !benchmarks/markdown.md
+
+.DS_Store
