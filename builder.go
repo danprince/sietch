@@ -487,45 +487,10 @@ func (b *builder) buildPage(page *Page) error {
 
 	page.Contents = pageBuf.String()
 
-	if len(page.islands.Elements) > 0 {
-		staticHtml, err := page.islands.CreateStaticHtml(&b.islandsFramework)
+	err = b.renderIslands(page)
 
-		if err != nil {
-			return err
-		}
-
-		for marker, html := range staticHtml {
-			page.Contents = strings.Replace(page.Contents, marker, html, 1)
-		}
-
-		assetsDir := path.Join(b.outDir, "_assets")
-
-		result, err := page.islands.CreateRuntime(islands.RuntimeOptions{
-			Framework:  &b.islandsFramework,
-			OutDir:     path.Join(assetsDir, page.path),
-			Production: !b.dev,
-		})
-
-		if err != nil {
-			return err
-		}
-
-		var scriptTags strings.Builder
-		var linkTags strings.Builder
-
-		for _, src := range result.Scripts {
-			src = strings.TrimPrefix(src, b.outDir)
-			scriptTags.WriteString(fmt.Sprintf(`<script type="module" src="%s"></script>`, src))
-		}
-
-		for _, href := range result.Links {
-			href = strings.TrimPrefix(href, b.outDir)
-			scriptTags.WriteString(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, href))
-		}
-
-		// Inject bundled scripts into the page
-		page.Contents = strings.Replace(page.Contents, "</head>", linkTags.String()+"</head>", 1)
-		page.Contents = strings.Replace(page.Contents, "</body>", scriptTags.String()+"</body>", 1)
+	if err != nil {
+		return err
 	}
 
 	// Finally, write to disk
@@ -534,6 +499,53 @@ func (b *builder) buildPage(page *Page) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (b *builder) renderIslands(page *Page) error {
+	if len(page.islands.Elements) == 0 {
+		return nil
+	}
+
+	staticHtml, err := page.islands.CreateStaticHtml(&b.islandsFramework)
+
+	if err != nil {
+		return err
+	}
+
+	for marker, html := range staticHtml {
+		page.Contents = strings.Replace(page.Contents, marker, html, 1)
+	}
+
+	assetsDir := path.Join(b.outDir, "_assets")
+
+	result, err := page.islands.CreateRuntime(islands.RuntimeOptions{
+		Framework:  &b.islandsFramework,
+		OutDir:     path.Join(assetsDir, page.path),
+		Production: !b.dev,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	var scriptTags strings.Builder
+	var linkTags strings.Builder
+
+	for _, src := range result.Scripts {
+		src = strings.TrimPrefix(src, b.outDir)
+		scriptTags.WriteString(fmt.Sprintf(`<script type="module" src="%s"></script>`, src))
+	}
+
+	for _, href := range result.Links {
+		href = strings.TrimPrefix(href, b.outDir)
+		linkTags.WriteString(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, href))
+	}
+
+	// Inject bundled scripts into the page
+	page.Contents = strings.Replace(page.Contents, "</head>", linkTags.String()+"</head>", 1)
+	page.Contents = strings.Replace(page.Contents, "</body>", scriptTags.String()+"</body>", 1)
 
 	return nil
 }
