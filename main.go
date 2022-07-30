@@ -23,17 +23,12 @@ func main() {
 		pagesDir = path.Join(rootDir, args[0])
 	}
 
-	outDir := path.Join(rootDir, "_site")
-	templateFile := path.Join(rootDir, "_template.html")
-	configFile := path.Join(rootDir, ".sietch.json")
+	builder := builderWithDefaults(rootDir)
+	builder.pagesDir = pagesDir
+	builder.dev = shouldServe
 
-	builder := builder{
-		rootDir:      rootDir,
-		pagesDir:     pagesDir,
-		outDir:       outDir,
-		templateFile: templateFile,
-		configFile:   configFile,
-	}
+	// Wipe outDir before we build/serve
+	os.RemoveAll(builder.outDir)
 
 	if shouldServe {
 		Serve(&builder)
