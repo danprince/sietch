@@ -62,16 +62,6 @@ main > nav {
   </head>
   <body>
     <main>
-      {{ $home := home . }}
-
-      {{ if (and $home $home.Data.nav) }}
-        <nav class="sans">
-          {{ range $name, $url := $home.Data.nav }}
-            <a href="{{$url}}">{{$name}}</a>
-          {{ end }}
-        </nav>
-      {{ end }}
-
       {{ if .Data.title -}}
         <h1>{{ .Data.title }}</h1>
       {{- end }}

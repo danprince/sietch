@@ -289,13 +289,13 @@ Secrecy`
 	}
 }
 
-func TestTemplateDateFunc(t *testing.T) {
+func TestDateFormat(t *testing.T) {
 	b := setup(t, testFS{
 		"index.md": `
 ---
-oct10: 2022-10-10
+date: 2022-10-10
 ---
-<time>{{ date "2006-1-2" "Jan 2, 2006" .Data.oct10 }}</time>`,
+<time>{{ .Date.Format "Jan 2, 2006" }}</time>`,
 	})
 
 	_, err := b.build()
