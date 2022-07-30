@@ -25,7 +25,6 @@ func main() {
 
 	builder := builderWithDefaults(rootDir)
 	builder.pagesDir = pagesDir
-	builder.dev = shouldServe
 
 	// Wipe outDir before we build/serve
 	os.RemoveAll(builder.outDir)
