@@ -130,13 +130,12 @@ func (b *builder) build() (time.Duration, error) {
 }
 
 func (b *builder) setup() {
-	defaultStyle := "doom-one"
+	defaultStyle := "algol_nu"
 	syntaxStyle := b.config.SyntaxColor
-	withClasses := false
+	withClasses := syntaxStyle == "css"
 
-	if syntaxStyle == "css" {
+	if withClasses {
 		syntaxStyle = defaultStyle
-		withClasses = true
 	}
 
 	b.markdown = goldmark.New(
