@@ -25,3 +25,6 @@ benchmarks/*
 !benchmarks/markdown.md
 
 .DS_Store
+
+# Compiled sites
+_site
