@@ -29,22 +29,23 @@ func Serve(b *builder) {
 
 	go watch(func(events []fsnotify.Event) []string {
 		var dt time.Duration
+		var watchDirs []string
 		dt, buildErr = b.build()
 		defer b.reset()
 
 		if buildErr != nil {
 			fmt.Fprintln(os.Stderr, errors.FmtError(buildErr))
-			return []string{}
+		} else {
+			fmt.Printf("built %d pages in %s\n", len(b.pages), dt)
+			watchDirs = b.dirs[:]
 		}
 
-		fmt.Printf("built %d pages in %s\n", len(b.pages), dt)
-
-		dirs := b.dirs
-		for index, dir := range b.dirs {
-			dirs[index] = path.Join(b.pagesDir, dir)
+		// Watch all crawled directories for changes.
+		for _, dir := range b.dirs {
+			watchDirs = append(watchDirs, path.Join(b.pagesDir, dir))
 		}
 
-		return dirs
+		return watchDirs
 	})
 
 	fmt.Println("serving site at http://localhost:8000...")

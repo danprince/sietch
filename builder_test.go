@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -38,6 +39,7 @@ func setup(t *testing.T, fileMap testFS) builder {
 		pagesDir:     tmpDir,
 		outDir:       path.Join(tmpDir, "_site"),
 		templateFile: path.Join(tmpDir, "_template.html"),
+		configFile:   path.Join(tmpDir, ".sietch.json"),
 	}
 }
 
@@ -233,6 +235,27 @@ func TestPageUrls(t *testing.T) {
 	}
 }
 
+func TestConfigFile(t *testing.T) {
+	b := setup(t, testFS{
+		"index.md":     "",
+		".sietch.json": `{"SyntaxColor": "monokai"}`,
+	})
+
+	_, err := b.build()
+
+	if err != nil {
+		t.Errorf("expected to build without errors: %s", err)
+	}
+
+	expectedConfig := config{
+		SyntaxColor: "monokai",
+	}
+
+	if !reflect.DeepEqual(b.config, expectedConfig) {
+		t.Errorf("expected config %+v but got %+v", expectedConfig, b.config)
+	}
+}
+
 func TestCustomTemplate(t *testing.T) {
 	indexMd := `
 ---
@@ -324,7 +347,7 @@ func (b *builder) expectBuildError(t *testing.T, msg string, patterns []string) 
 	_, err := b.build()
 
 	if err == nil {
-		t.Errorf(msg)
+		t.Error(msg)
 	}
 
 	message := err.Error()
@@ -397,7 +420,7 @@ func TestTemplateParseError(t *testing.T) {
 	})
 }
 
-func TestTemplateEvaluation(t *testing.T) {
+func TestTemplateEvaluationError(t *testing.T) {
 	b := setup(t, testFS{
 		"index.md":       ``,
 		"_template.html": "{{ .Woo }}",
@@ -407,6 +430,18 @@ func TestTemplateEvaluation(t *testing.T) {
 		"_template.html:1",
 		`can't evaluate field Woo`,
 		"\\^\\^\\^",
+	})
+}
+
+func TestParseConfigError(t *testing.T) {
+	b := setup(t, testFS{
+		".sietch.json": `{"SyntaxColor":123}`,
+	})
+
+	b.expectBuildError(t, "json error", []string{
+		`\.sietch\.json`,
+		`\^\^\^`,
+		"expected config.SyntaxColor to be a string",
 	})
 }
 

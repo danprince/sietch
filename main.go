@@ -25,12 +25,14 @@ func main() {
 
 	outDir := path.Join(rootDir, "_site")
 	templateFile := path.Join(rootDir, "_template.html")
+	configFile := path.Join(rootDir, ".sietch.json")
 
 	builder := builder{
 		rootDir:      rootDir,
 		pagesDir:     pagesDir,
 		outDir:       outDir,
 		templateFile: templateFile,
+		configFile:   configFile,
 	}
 
 	if shouldServe {

@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
 	"regexp"
@@ -133,6 +134,36 @@ func TemplateExecError(err error, file string, src string, offset int) error {
 		err:     err,
 		msg:     msg,
 	}
+}
+
+func ParseJsonError(err error, file string, src string) error {
+	if jsonError, ok := err.(*json.SyntaxError); ok {
+		line := strings.Count(src[:jsonError.Offset], "\n") + 1
+
+		return &codeFrameError{
+			summary: "json parse error",
+			file:    file,
+			line:    line,
+			src:     src,
+			err:     err,
+			msg:     jsonError.Error(),
+		}
+	}
+
+	if err, ok := err.(*json.UnmarshalTypeError); ok {
+		line := strings.Count(src[:err.Offset], "\n") + 1
+
+		return &codeFrameError{
+			summary: "json invalid type",
+			file:    file,
+			line:    line,
+			src:     src,
+			err:     err,
+			msg:     fmt.Sprintf("expected %s.%s to be a %s", err.Struct, err.Field, err.Type),
+		}
+	}
+
+	return err
 }
 
 func FmtError(err error) string {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -27,6 +28,10 @@ import (
 //go:embed template.html
 var defaultTemplateHtml []byte
 
+type config struct {
+	SyntaxColor string
+}
+
 // Builder's hold all the necessary information to produce a static site.
 type builder struct {
 	// Working directory the command was run.
@@ -35,6 +40,10 @@ type builder struct {
 	pagesDir string
 	// Directory to output content (defaults to <rootDir>/_site).
 	outDir string
+	// Path to the template file (defaults to <rootDir>/.sietch.json).
+	configFile string
+	// Parsed version of configFile
+	config config
 	// Path to the template file (defaults to <rootDir>/_template.html).
 	templateFile string
 	// Compiled version of the site's template file.
@@ -104,6 +113,11 @@ func (b *builder) build() (time.Duration, error) {
 	start := time.Now()
 
 	b.scan()
+
+	err = b.readConfig()
+	if err != nil {
+		return dt, err
+	}
 
 	err = b.readTemplates()
 	if err != nil {
@@ -248,6 +262,28 @@ func (b *builder) defaultTemplateFuncs() template.FuncMap {
 			return m
 		},
 	}
+}
+
+// Reads the config file (if it exists)
+func (b *builder) readConfig() error {
+	_, err := os.Stat(b.configFile)
+
+	if err != nil {
+		return nil
+	}
+
+	contents, err := os.ReadFile(b.configFile)
+
+	if os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(contents, &b.config)
+	file := strings.TrimPrefix(b.configFile, b.pagesDir)
+
+	return errors.ParseJsonError(err, file, string(contents))
 }
 
 // Reads the appropriate page templates from disk, and falls back to defaults
