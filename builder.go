@@ -74,6 +74,7 @@ var md = goldmark.New(
 	goldmark.WithExtensions(
 		extension.GFM,
 		extension.Footnote,
+		markdown.Links,
 		markdown.NewHighlighting(
 			// TODO: This should be configurable. How to avoid without config file?
 			"algol_nu",
