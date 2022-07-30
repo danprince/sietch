@@ -409,3 +409,49 @@ func TestTemplateEvaluation(t *testing.T) {
 		"\\^\\^\\^",
 	})
 }
+
+func setupBench(b *testing.B, subdir string) builder {
+	cwd, _ := os.Getwd()
+	tmpDir := path.Join(cwd, subdir)
+	return builder{
+		rootDir:      tmpDir,
+		pagesDir:     tmpDir,
+		outDir:       path.Join(tmpDir, "_site"),
+		templateFile: path.Join(tmpDir, "_template.html"),
+	}
+}
+
+func BenchmarkSmall(b *testing.B) {
+	builder := setupBench(b, "benchmark/small")
+
+	for n := 0; n < b.N; n++ {
+		builder.build()
+		builder.reset()
+	}
+}
+func BenchmarkMedium(b *testing.B) {
+	builder := setupBench(b, "benchmark/medium")
+
+	for n := 0; n < b.N; n++ {
+		builder.build()
+		builder.reset()
+	}
+}
+
+func BenchmarkLarge(b *testing.B) {
+	builder := setupBench(b, "benchmark/large")
+
+	for n := 0; n < b.N; n++ {
+		builder.build()
+		builder.reset()
+	}
+}
+
+func BenchmarkHuge(b *testing.B) {
+	builder := setupBench(b, "benchmark/huge")
+
+	for n := 0; n < b.N; n++ {
+		builder.build()
+		builder.reset()
+	}
+}

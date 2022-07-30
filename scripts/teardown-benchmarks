@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+rm -r benchmark/{small,medium,large,huge}

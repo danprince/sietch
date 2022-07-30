@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+setup() {
+  dir=$1
+  count=$2
+  rm -rf "$dir"
+  mkdir -p "$dir"
+
+  for ((n=0; n<count;n++)); do
+    name=$(printf "%04d" $n)
+    cp benchmark/markdown.md "$dir/$name.md"
+  done
+}
+
+setup benchmark/small 5
+setup benchmark/medium 50
+setup benchmark/large 200
+setup benchmark/huge 2000
