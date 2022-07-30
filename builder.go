@@ -19,6 +19,7 @@ import (
 	"github.com/danprince/sietch/internal/markdown"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/sync/errgroup"
 )
@@ -67,6 +68,9 @@ type Asset struct {
 }
 
 var md = goldmark.New(
+	goldmark.WithParserOptions(
+		parser.WithAutoHeadingID(),
+	),
 	goldmark.WithExtensions(
 		extension.GFM,
 		extension.Footnote,
