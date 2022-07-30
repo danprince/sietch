@@ -19,9 +19,6 @@ body {
 
 h1, h2, h3, h4, .sans {
   font-family: 'Helvetica Neue', 'Arial Nova', Helvetica, Arial, sans-serif;
-}
-
-h1 {
   margin-bottom: 0;
 }
 
@@ -31,7 +28,7 @@ h2, h3, h4 {
 
 pre, code {
   font-family: Consolas, Menlo, Monaco, monospace;
-  font-size: 1.1rem;
+  font-size: 1rem;
   border-radius: 4px;
   background-color: ghostwhite;
   padding: 4px;
@@ -39,6 +36,7 @@ pre, code {
 
 pre code {
   padding: 0;
+  background: none;
 }
 
 pre {
@@ -78,8 +76,8 @@ main > nav {
         <h1>{{ .Data.title }}</h1>
       {{- end }}
 
-      {{ if .Data.date -}}
-        <time class="sans">{{ .Data.date | date "2006-1-2" "Jan 2, 2006" }}</time>
+      {{ if not .Date.IsZero -}}
+        <time class="sans">{{ .Date.Format "Jan 2, 2006" }}</time>
       {{- end }}
 
       {{ .Contents }}
