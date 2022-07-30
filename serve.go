@@ -106,7 +106,3 @@ func watch(build func(events []fsnotify.Event) []string) {
 		}
 	}
 }
-
-func fmtError(err error) {
-	panic("unimplemented")
-}
