@@ -522,7 +522,7 @@ func (b *builder) renderIslands(page *Page) error {
 
 	result, err := page.islands.CreateRuntime(islands.RuntimeOptions{
 		Framework:  &b.islandsFramework,
-		OutDir:     path.Join(assetsDir, page.path),
+		OutDir:     path.Join(assetsDir, page.Url),
 		Production: !b.dev,
 	})
 
