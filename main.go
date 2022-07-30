@@ -38,10 +38,12 @@ func main() {
 		return
 	}
 
-	err := builder.build()
+	dt, err := builder.build()
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, errors.FmtError(err))
 		os.Exit(1)
+	} else {
+		fmt.Printf("built %d pages in %s", len(builder.pages), dt)
 	}
 }

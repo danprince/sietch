@@ -93,39 +93,40 @@ func (b *builder) reset() {
 }
 
 // Scan, parse, and compile the entire site.
-func (b *builder) build() error {
+func (b *builder) build() (time.Duration, error) {
 	var err error
+	var dt time.Duration
 	start := time.Now()
 
 	b.scan()
 
 	err = b.readTemplates()
 	if err != nil {
-		return err
+		return dt, err
 	}
 
 	err = b.readPages()
 	if err != nil {
-		return err
+		return dt, err
 	}
 
 	err = b.mkdirs()
 	if err != nil {
-		return err
+		return dt, err
 	}
 
 	err = b.buildPages()
 	if err != nil {
-		return err
+		return dt, err
 	}
 
 	err = b.buildAssets()
 	if err != nil {
-		return err
+		return dt, err
 	}
 
-	fmt.Printf("built site in %s\n", time.Since(start))
-	return nil
+	dt = time.Since(start)
+	return dt, nil
 }
 
 // Recursive walk of the site to identify pages and assets.

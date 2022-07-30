@@ -57,7 +57,7 @@ func TestBuild(t *testing.T) {
 		"index.md": "# Index",
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -95,7 +95,7 @@ func TestBuildAssets(t *testing.T) {
 		"tabr.js":  "alert('stilgar')",
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -127,7 +127,7 @@ func TestIgnorePaths(t *testing.T) {
 		"_nested/nope.md": "# Nested Nope",
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -158,7 +158,7 @@ Cool!
 `,
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -190,7 +190,7 @@ id: tabr
 `,
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -213,7 +213,7 @@ func TestPageUrls(t *testing.T) {
 		"docs/help.md":  ``,
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -248,7 +248,7 @@ Secrecy`
 		"_template.html": templateHtml,
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -275,7 +275,7 @@ oct10: 2022-10-10
 <time>{{ date "2006-1-2" "Jan 2, 2006" .Data.oct10 }}</time>`,
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -302,7 +302,7 @@ index: true
 		"c/index.md": "C",
 	})
 
-	err := b.build()
+	_, err := b.build()
 
 	if err != nil {
 		t.Errorf("expected to build without errors: %s", err)
@@ -321,7 +321,7 @@ index: true
 }
 
 func (b *builder) expectBuildError(t *testing.T, msg string, patterns []string) {
-	err := b.build()
+	_, err := b.build()
 
 	if err == nil {
 		t.Errorf(msg)

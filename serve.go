@@ -21,7 +21,7 @@ func Serve(b *builder) {
 		// Rebuild the site whenever an HTML file is requested
 		if rebuild {
 			b.reset()
-			err = b.build()
+			dt, err := b.build()
 
 			if err != nil {
 				w.Header().Add("Content-type", "text/html")
@@ -30,6 +30,8 @@ func Serve(b *builder) {
 				fmt.Fprintln(os.Stderr, errors.FmtError(err))
 				return
 			}
+
+			fmt.Printf("built %d pages in %s", len(b.pages), dt)
 		}
 
 		server.ServeHTTP(w, r)
