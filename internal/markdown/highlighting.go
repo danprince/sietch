@@ -62,14 +62,14 @@ type highlighting struct {
 	options []html.Option
 }
 
-type htmlRenderer struct {
+type highlightRenderer struct {
 	style   string
 	options []html.Option
 }
 
 func (e *highlighting) Extend(m goldmark.Markdown) {
 	m.Renderer().AddOptions(renderer.WithNodeRenderers(
-		util.Prioritized(&htmlRenderer{e.style, e.options}, 200),
+		util.Prioritized(&highlightRenderer{e.style, e.options}, 200),
 	))
 }
 
@@ -77,11 +77,11 @@ func NewHighlighting(style string, options ...html.Option) *highlighting {
 	return &highlighting{style: style, options: options}
 }
 
-func (r *htmlRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+func (r *highlightRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindFencedCodeBlock, r.renderFencedCodeBlock)
 }
 
-func (r *htmlRenderer) renderFencedCodeBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (r *highlightRenderer) renderFencedCodeBlock(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*ast.FencedCodeBlock)
 
 	if !entering {
