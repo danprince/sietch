@@ -8,12 +8,13 @@
     {{ end }}
     <style>
 body {
-  font: 1.2rem/1.8 Georgia, 'Times New Roman', serif;
+  font: 1.17rem/1.6 Georgia, 'Times New Roman', serif;
   padding: 2rem 0 8em 0;
   max-width: 700px;
   margin: 0 auto;
   padding: 0 1rem;
   margin-bottom: 64px;
+  color: #111;
 }
 
 h1, h2, h3, h4, .sans {
@@ -31,17 +32,22 @@ h2, h3, h4 {
 pre, code {
   font-family: Consolas, Menlo, Monaco, monospace;
   font-size: 1.1rem;
+  border-radius: 4px;
+  background-color: ghostwhite !important;
+  padding: 4px;
+}
+
+pre code {
+  padding: 0;
 }
 
 pre {
-  border-radius: 4px;
   padding: 12px;
   overflow-x: auto;
 }
 
 main > pre {
   margin-left: -12px;
-  border: solid 2px black;
 }
 
 img, svg {
@@ -60,7 +66,7 @@ main > nav {
     <main>
       {{ $home := home . }}
 
-      {{ if $home.Data.nav }}
+      {{ if (and $home $home.Data.nav) }}
         <nav class="sans">
           {{ range $name, $url := $home.Data.nav }}
             <a href="{{$url}}">{{$name}}</a>

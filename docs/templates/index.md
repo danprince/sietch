@@ -12,7 +12,7 @@ Here are some common examples.
 <!-- Render the page contents -->
 {{"{{ .Contents }}"}}
 
-<! -- Render properties from the current page's front matter -->
+<!-- Render properties from the current page's front matter -->
 {{"{{ .Data.title }}"}}
 
 <!-- Render conditionally -->
