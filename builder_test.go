@@ -445,6 +445,26 @@ func TestParseConfigError(t *testing.T) {
 	})
 }
 
+func TestInvalidConfigError(t *testing.T) {
+	b := setup(t, testFS{
+		".sietch.json": `{"SyntaxColor":"blebby"}`,
+	})
+
+	b.expectBuildError(t, "json error", []string{
+		"invalid syntax color: blebby",
+	})
+}
+
+func TestInvalidSyntaxSuggestions(t *testing.T) {
+	b := setup(t, testFS{
+		".sietch.json": `{"SyntaxColor":"dragula"}`,
+	})
+
+	b.expectBuildError(t, "syntax suggestion error", []string{
+		"dracula",
+	})
+}
+
 func setupBench(b *testing.B, subdir string) builder {
 	cwd, _ := os.Getwd()
 	tmpDir := path.Join(cwd, subdir)

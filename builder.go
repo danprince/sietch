@@ -28,10 +28,6 @@ import (
 //go:embed template.html
 var defaultTemplateHtml []byte
 
-type config struct {
-	SyntaxColor string
-}
-
 // Builder's hold all the necessary information to produce a static site.
 type builder struct {
 	// Working directory the command was run.
@@ -56,6 +52,8 @@ type builder struct {
 	pagesByDepth [][]*Page
 	// All non-page assets in the site.
 	assets []*Asset
+	// Configured markdown parser/renderer
+	markdown goldmark.Markdown
 }
 
 // A page represents a single markdown file in the pagesDir.
@@ -75,27 +73,6 @@ type Page struct {
 type Asset struct {
 	Path string
 }
-
-var md = goldmark.New(
-	goldmark.WithParserOptions(
-		parser.WithAutoHeadingID(),
-	),
-	goldmark.WithExtensions(
-		extension.GFM,
-		extension.Footnote,
-		markdown.Links,
-		markdown.NewHighlighting(
-			// TODO: This should be configurable. How to avoid without config file?
-			"algol_nu",
-			// TODO: This should be turned off for CSS themes
-			//chromaHtml.WithClasses(true),
-			chromaHtml.TabWidth(2),
-		),
-	),
-	goldmark.WithRendererOptions(
-		html.WithUnsafe(),
-	),
-)
 
 // Reset the internal state of the builder to prevent memory leaks across
 // successive rebuilds.
@@ -118,6 +95,8 @@ func (b *builder) build() (time.Duration, error) {
 	if err != nil {
 		return dt, err
 	}
+
+	b.setup()
 
 	err = b.readTemplates()
 	if err != nil {
@@ -146,6 +125,36 @@ func (b *builder) build() (time.Duration, error) {
 
 	dt = time.Since(start)
 	return dt, nil
+}
+
+func (b *builder) setup() {
+	defaultStyle := "doom-one"
+	syntaxStyle := b.config.SyntaxColor
+	withClasses := false
+
+	if syntaxStyle == "css" {
+		syntaxStyle = defaultStyle
+		withClasses = true
+	}
+
+	b.markdown = goldmark.New(
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+		),
+		goldmark.WithExtensions(
+			extension.GFM,
+			extension.Footnote,
+			markdown.Links,
+			markdown.NewHighlighting(
+				syntaxStyle,
+				chromaHtml.WithClasses(withClasses),
+				chromaHtml.TabWidth(2),
+			),
+		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(),
+		),
+	)
 }
 
 // Recursive walk of the site to identify pages and assets.
@@ -283,7 +292,12 @@ func (b *builder) readConfig() error {
 	err = json.Unmarshal(contents, &b.config)
 	file := strings.TrimPrefix(b.configFile, b.pagesDir)
 
-	return errors.ParseJsonError(err, file, string(contents))
+	err = errors.ParseJsonError(err, file, string(contents))
+	if err != nil {
+		return err
+	}
+
+	return b.config.validate()
 }
 
 // Reads the appropriate page templates from disk, and falls back to defaults
@@ -398,7 +412,7 @@ func (b *builder) buildPage(page *Page) error {
 
 	// Convert the result of the template from markdown to html
 	var htmlBuf bytes.Buffer
-	err = md.Convert(mdBuf.Bytes(), &htmlBuf)
+	err = b.markdown.Convert(mdBuf.Bytes(), &htmlBuf)
 
 	if err != nil {
 		return err
