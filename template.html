@@ -74,7 +74,7 @@ main > nav {
 
       {{- if (eq .Data.index true) -}}
         <ul>
-          {{- range (index .) -}}
+          {{- range index -}}
             <li>
               <a href="{{- .Url -}}">
                 {{- .Data.title -}}

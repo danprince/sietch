@@ -220,7 +220,8 @@ func (b *builder) templateFuncs(dir string) template.FuncMap {
 
 			// TODO: Slow: index pages by dir instead.
 			for _, page := range b.pages {
-				if page.dir == dir || (page.Name == "index.md" && path.Dir(page.dir) == dir) {
+				pageDir := path.Join(b.pagesDir, page.dir)
+				if (pageDir == dir && page.Name != "index.md") || (page.Name == "index.md" && path.Dir(pageDir) == dir) {
 					siblings = append(siblings, page)
 				}
 			}
