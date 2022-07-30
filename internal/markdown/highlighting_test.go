@@ -1,4 +1,4 @@
-package highlighting
+package markdown
 
 import (
 	"bytes"

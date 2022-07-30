@@ -16,7 +16,7 @@ import (
 	"github.com/adrg/frontmatter"
 	chromaHtml "github.com/alecthomas/chroma/formatters/html"
 	"github.com/danprince/sietch/internal/errors"
-	"github.com/danprince/sietch/internal/highlighting"
+	"github.com/danprince/sietch/internal/markdown"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
@@ -66,11 +66,11 @@ type Asset struct {
 	Path string
 }
 
-var markdown = goldmark.New(
+var md = goldmark.New(
 	goldmark.WithExtensions(
 		extension.GFM,
 		extension.Footnote,
-		highlighting.NewHighlighting(
+		markdown.NewHighlighting(
 			// TODO: This should be configurable. How to avoid without config file?
 			"algol_nu",
 			// TODO: This should be turned off for CSS themes
@@ -357,7 +357,7 @@ func (b *builder) buildPage(page *Page) error {
 
 	// Convert the result of the template from markdown to html
 	var htmlBuf bytes.Buffer
-	err = markdown.Convert(mdBuf.Bytes(), &htmlBuf)
+	err = md.Convert(mdBuf.Bytes(), &htmlBuf)
 
 	if err != nil {
 		return err
