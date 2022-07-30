@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -64,6 +65,7 @@ type Page struct {
 	Url            string
 	Contents       string
 	Data           map[string]any
+	Date           time.Time
 	depth          int
 	outPath        string
 	contentsOffset int
@@ -255,6 +257,10 @@ func (b *builder) defaultTemplateFuncs() template.FuncMap {
 				}
 			}
 
+			sort.SliceStable(siblings, func(i, j int) bool {
+				return siblings[i].Date.Before(siblings[j].Date)
+			})
+
 			return siblings
 		},
 		"attrs": func(kvs ...any) map[string]any {
@@ -334,9 +340,14 @@ func (b *builder) readPages() error {
 	return g.Wait()
 }
 
+var builtinDateFormats = []string{
+	"2006-1-2",
+}
+
 // Reads the contents and parses the front matter for a page.
 func (b *builder) readPage(page *Page) error {
-	contents, err := os.ReadFile(path.Join(b.pagesDir, page.path))
+	name := path.Join(b.pagesDir, page.path)
+	contents, err := os.ReadFile(name)
 
 	if err != nil {
 		return err
@@ -347,6 +358,22 @@ func (b *builder) readPage(page *Page) error {
 
 	if err != nil {
 		return errors.YamlParseError(err, page.path, string(contents))
+	}
+
+	// Attempt to parse a real date from the front matter
+	anyDate := page.Data["date"]
+
+	if anyDate != nil {
+		dateStr, ok := anyDate.(string)
+		if ok {
+			for _, layout := range builtinDateFormats {
+				date, err := time.Parse(layout, dateStr)
+				if err == nil {
+					page.Date = date
+					break
+				}
+			}
+		}
 	}
 
 	// Calculate how much the frontmatter offset the page contents to help with
