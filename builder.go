@@ -319,25 +319,11 @@ func (b *builder) mkdirs() error {
 	return nil
 }
 
-// Builds all pages, working from the deepest level to the surface. This
-// bottom-to-top approach is a simpler option than managing a dependency
-// tree and provides the guarantee that when templating a page, all
-// nested/child pages have already been evaluated and rendered.
+// Build and render all pages concurrently
 func (b *builder) buildPages() error {
-	for d := len(b.pagesByDepth) - 1; d >= 0; d-- {
-		err := b.buildPagesAtDepth(d)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Builds all pages at a specific directory depth concurrently.
-func (b *builder) buildPagesAtDepth(depth int) error {
 	var g errgroup.Group
 
-	for _, p := range b.pagesByDepth[depth] {
+	for _, p := range b.pages {
 		page := p
 		g.Go(func() error {
 			return b.buildPage(page)
