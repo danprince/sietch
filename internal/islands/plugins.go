@@ -15,7 +15,7 @@ import (
 
 var httpImportNamespace = "http-import"
 
-func httpExternalsPlugin(importMap map[string]string) api.Plugin {
+func httpExternalsPlugin(importMap map[string]string, preloadModules *[]string) api.Plugin {
 	var names []string
 
 	for name := range importMap {
@@ -27,14 +27,23 @@ func httpExternalsPlugin(importMap map[string]string) api.Plugin {
 	return api.Plugin{
 		Name: "esbuild-http-import-map-plugin",
 		Setup: func(build api.PluginBuild) {
-			build.OnResolve(api.OnResolveOptions{
-				Filter: modulesFilter,
-			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
+			resolve := func(args api.OnResolveArgs) (api.OnResolveResult, error) {
+				resolved, ok := importMap[args.Path]
+
+				if !ok {
+					resolved = args.Path
+				}
+
+				*preloadModules = append(*preloadModules, resolved)
+
 				return api.OnResolveResult{
-					Path:     importMap[args.Path],
+					Path:     resolved,
 					External: true,
 				}, nil
-			})
+			}
+
+			build.OnResolve(api.OnResolveOptions{Filter: modulesFilter}, resolve)
+			build.OnResolve(api.OnResolveOptions{Filter: `^https?://`}, resolve)
 		},
 	}
 }
@@ -74,7 +83,7 @@ func virtualEntryPlugin(entryPoint virtualEntryPoint) api.Plugin {
 	}
 }
 
-func httpImportMapPlugin(importMap map[string]string) api.Plugin {
+func httpImportsPlugin(importMap map[string]string) api.Plugin {
 	var names []string
 
 	for name := range importMap {
@@ -84,9 +93,9 @@ func httpImportMapPlugin(importMap map[string]string) api.Plugin {
 	modulesFilter := fmt.Sprintf(`^(%s)$`, strings.Join(names, "|"))
 
 	return api.Plugin{
-		Name: "esbuild-http-import-map-plugin",
+		Name: "esbuild-http-import-plugin",
 		Setup: func(build api.PluginBuild) {
-			// Resolve modules from the import map and add the http-import namespace
+			// Resolve http imports from modules in the import map
 			build.OnResolve(api.OnResolveOptions{
 				Filter: modulesFilter,
 			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
@@ -95,14 +104,7 @@ func httpImportMapPlugin(importMap map[string]string) api.Plugin {
 					Namespace: httpImportNamespace,
 				}, nil
 			})
-		},
-	}
-}
 
-func httpImportsPlugin() api.Plugin {
-	return api.Plugin{
-		Name: "esbuild-http-import-plugin",
-		Setup: func(build api.PluginBuild) {
 			// Add the http-import namespace to non-mapped imports too
 			build.OnResolve(api.OnResolveOptions{
 				Filter: `^https?://`,

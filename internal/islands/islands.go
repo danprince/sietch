@@ -99,9 +99,10 @@ func (ctx *Ctx) CreateStaticHtml(framework *Framework) (map[string]string, error
 	return staticHtml, nil
 }
 
-type runtime struct {
-	Scripts []string
-	Links   []string
+type RuntimeResult struct {
+	Scripts        []string
+	Links          []string
+	PreloadModules []string
 }
 
 type RuntimeOptions struct {
@@ -110,11 +111,11 @@ type RuntimeOptions struct {
 	Production bool
 }
 
-func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
+func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 	script, err := options.Framework.createHydrateScript(ctx)
 
 	if err != nil {
-		return runtime{}, err
+		return RuntimeResult{}, err
 	}
 
 	entryNames := "[dir]/[name]"
@@ -122,6 +123,8 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
 	if options.Production {
 		entryNames = "[hash]"
 	}
+
+	preloadModules := []string{}
 
 	result := esbuild.Build(esbuild.BuildOptions{
 		EntryPoints:       []string{"@sietch/client"},
@@ -144,7 +147,9 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
 				resolveDir: ctx.ResolveDir,
 				loader:     esbuild.LoaderJS,
 			}),
-			httpExternalsPlugin(options.Framework.importMap),
+			// TODO: Decide whether to bundle or externalise HTTP imports
+			//httpImportsPlugin(options.Framework.HttpImportMap),
+			httpExternalsPlugin(options.Framework.importMap, &preloadModules),
 		},
 	})
 
@@ -155,7 +160,7 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
 
 	for _, err := range result.Errors {
 		// TODO: Use better errors
-		return runtime{}, errors.New(err.Text)
+		return RuntimeResult{}, errors.New(err.Text)
 	}
 
 	var scripts []string
@@ -178,9 +183,10 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
 		scripts = []string{}
 	}
 
-	return runtime{
-		Scripts: scripts,
-		Links:   links,
+	return RuntimeResult{
+		Scripts:        scripts,
+		Links:          links,
+		PreloadModules: preloadModules,
 	}, nil
 }
 
@@ -206,8 +212,7 @@ func (ctx *Ctx) staticBundle(framework *Framework) (string, error) {
 		JSXMode:         esbuild.JSXModeAutomatic,
 		JSXImportSource: framework.jsxImportSource,
 		Plugins: []esbuild.Plugin{
-			httpImportMapPlugin(framework.importMap),
-			httpImportsPlugin(),
+			httpImportsPlugin(framework.importMap),
 		},
 	})
 

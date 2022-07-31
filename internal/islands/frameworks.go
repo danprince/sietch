@@ -7,7 +7,7 @@ import (
 )
 
 var React = Framework{
-	importMap: map[string]string{},
+	importMap:       map[string]string{},
 	jsxImportSource: "react/jsx-runtime",
 	createRenderScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
@@ -67,7 +67,7 @@ var React = Framework{
 }
 
 var Preact = Framework{
-	importMap: map[string]string{},
+	importMap:       map[string]string{},
 	jsxImportSource: "preact/jsx-runtime",
 	createRenderScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
