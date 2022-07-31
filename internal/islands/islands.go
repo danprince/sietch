@@ -238,10 +238,13 @@ func (ctx *Ctx) runInV8(js string) (map[string]string, error) {
 	v8Ctx := v8go.NewContext(iso)
 	defer v8Ctx.Close()
 
-	os.WriteFile("/tmp/test.js", []byte(js), os.ModePerm)
 	val, err := v8Ctx.RunScript(js, "hydrate.js")
-	// TODO: Wrap with a meaningful error, incl. stack trace
+
 	if err != nil {
+		// TODO: Wrap with a meaningful error, incl. stack trace
+		tmp := path.Join(os.TempDir(), "/v8debug.js")
+		os.WriteFile(tmp, []byte(js), os.ModePerm)
+		fmt.Println("V8 ERROR", err, tmp)
 		return nil, err
 	}
 
