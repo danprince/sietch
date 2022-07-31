@@ -514,7 +514,7 @@ func (b *builder) renderIslands(page *Page) error {
 	bundleOptions := &islands.BundleOptions{
 		Framework:  &b.islandsFramework,
 		OutDir:     outDir,
-		PublicPath: strings.TrimPrefix(assetsDir, b.outDir),
+		PublicPath: strings.TrimPrefix(outDir, b.outDir),
 		Production: !b.dev,
 	}
 

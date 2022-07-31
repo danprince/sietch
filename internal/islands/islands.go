@@ -258,6 +258,24 @@ func (ctx *Ctx) staticBundle(options *BundleOptions) (string, error) {
 
 	var outfile esbuild.OutputFile
 
+	// Make sure file assets are written to disk, so that they're available for
+	// elements that won't be re-rendered as part of the client bundle.
+	for _, file := range result.OutputFiles {
+		ext := path.Ext(file.Path)
+		l, ok := loader[ext]
+		if ok && l == esbuild.LoaderFile {
+			err := os.MkdirAll(path.Dir(file.Path), 0755)
+			if err != nil {
+				return "", err
+			}
+
+			err = os.WriteFile(file.Path, []byte(file.Contents), 0644)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
 	// Make sure we pick the correct file from the outputs, sometimes there
 	// will be other assets here (e.g. images).
 	for _, file := range result.OutputFiles {
