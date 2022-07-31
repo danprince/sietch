@@ -39,17 +39,17 @@ func httpExternalsPlugin(importMap map[string]string) api.Plugin {
 	}
 }
 
-type dynamicEntryPoint struct {
+type virtualEntryPoint struct {
 	name       string
 	contents   *string
 	resolveDir string
 	loader     api.Loader
 }
 
-func dynamicEntryPlugin(entryPoint dynamicEntryPoint) api.Plugin {
+func virtualEntryPlugin(entryPoint virtualEntryPoint) api.Plugin {
 	namespace := "entry"
 	return api.Plugin{
-		Name: "dynamic-entry-plugin",
+		Name: "virtual-entry-plugin",
 		Setup: func(build api.PluginBuild) {
 			build.OnResolve(api.OnResolveOptions{
 				Filter: entryPoint.name,

@@ -136,7 +136,7 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
 		Format:            esbuild.FormatESModule,
 		JSXMode:           esbuild.JSXModeTransform,
 		Plugins: []esbuild.Plugin{
-			dynamicEntryPlugin(dynamicEntryPoint{
+			virtualEntryPlugin(virtualEntryPoint{
 				name:       "@sietch/client",
 				contents:   &script,
 				resolveDir: ctx.ResolveDir,
