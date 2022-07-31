@@ -511,38 +511,30 @@ func (b *builder) renderIslands(page *Page) error {
 	assetsDir := path.Join(b.outDir, "_assets")
 	outDir := path.Join(assetsDir, page.Url)
 
-	bundleOptions := &islands.BundleOptions{
+	render, err := page.islands.Build(islands.BundleOptions{
 		Framework:  &b.islandsFramework,
 		OutDir:     outDir,
 		PublicPath: strings.TrimPrefix(outDir, b.outDir),
 		Production: !b.dev,
-	}
-
-	staticHtml, err := page.islands.CreateStaticHtml(bundleOptions)
+	})
 
 	if err != nil {
 		return err
 	}
 
-	for marker, html := range staticHtml {
+	for marker, html := range render.Elements {
 		page.Contents = strings.Replace(page.Contents, marker, html, 1)
-	}
-
-	result, err := page.islands.CreateRuntime(bundleOptions)
-
-	if err != nil {
-		return err
 	}
 
 	var scriptTags strings.Builder
 	var linkTags strings.Builder
 
-	for _, src := range result.Scripts {
+	for _, src := range render.Scripts {
 		src = strings.TrimPrefix(src, b.outDir)
 		scriptTags.WriteString(fmt.Sprintf(`<script type="module" src="%s"></script>`, src))
 	}
 
-	for _, href := range result.Links {
+	for _, href := range render.Styles {
 		href = strings.TrimPrefix(href, b.outDir)
 		linkTags.WriteString(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, href))
 	}

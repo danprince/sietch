@@ -16,7 +16,6 @@ import (
 var httpImportNamespace = "http-import"
 
 type virtualModule struct {
-	name       string
 	contents   *string
 	resolveDir string
 	loader     api.Loader
