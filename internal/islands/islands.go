@@ -138,11 +138,12 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 		JSXMode:           esbuild.JSXModeAutomatic,
 		JSXImportSource:   options.Framework.jsxImportSource,
 		Plugins: []esbuild.Plugin{
-			virtualEntryPlugin(virtualEntryPoint{
-				name:       "@sietch/client",
-				contents:   &script,
-				resolveDir: ctx.ResolveDir,
-				loader:     esbuild.LoaderJS,
+			virtualModulesPlugin(map[string]virtualModule{
+				"@sietch/client": {
+					contents:   &script,
+					resolveDir: ctx.ResolveDir,
+					loader:     esbuild.LoaderJS,
+				},
 			}),
 			httpImportsPlugin(options.Framework.importMap),
 		},

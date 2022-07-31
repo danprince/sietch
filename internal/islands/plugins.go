@@ -15,20 +15,30 @@ import (
 
 var httpImportNamespace = "http-import"
 
-type virtualEntryPoint struct {
+type virtualModule struct {
 	name       string
 	contents   *string
 	resolveDir string
 	loader     api.Loader
 }
 
-func virtualEntryPlugin(entryPoint virtualEntryPoint) api.Plugin {
-	namespace := "entry"
+func virtualModulesPlugin(modules map[string]virtualModule) api.Plugin {
+	namespace := "virtual-modules"
+	names := []string{}
+
+	for name := range modules {
+		// regexp escapes
+		name = strings.ReplaceAll(name, "/", `\/`)
+		names = append(names, name)
+	}
+
+	filter := fmt.Sprintf(`^(%s)$`, strings.Join(names, "|"))
+
 	return api.Plugin{
-		Name: "virtual-entry-plugin",
+		Name: "virtual-modules-plugin",
 		Setup: func(build api.PluginBuild) {
 			build.OnResolve(api.OnResolveOptions{
-				Filter: entryPoint.name,
+				Filter: filter,
 			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
 				return api.OnResolveResult{
 					Path:      args.Path,
@@ -37,13 +47,14 @@ func virtualEntryPlugin(entryPoint virtualEntryPoint) api.Plugin {
 			})
 
 			build.OnLoad(api.OnLoadOptions{
-				Filter:    entryPoint.name,
+				Filter:    `.*`,
 				Namespace: namespace,
 			}, func(args api.OnLoadArgs) (api.OnLoadResult, error) {
+				module := modules[args.Path]
 				return api.OnLoadResult{
-					Contents:   entryPoint.contents,
-					ResolveDir: entryPoint.resolveDir,
-					Loader:     entryPoint.loader,
+					Contents:   module.contents,
+					ResolveDir: module.resolveDir,
+					Loader:     module.loader,
 				}, nil
 			})
 		},
