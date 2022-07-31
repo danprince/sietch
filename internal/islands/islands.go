@@ -132,7 +132,7 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 		MinifySyntax:      options.Production,
 		MinifyWhitespace:  options.Production,
 		MinifyIdentifiers: options.Production,
-		Sourcemap:         esbuild.SourceMapExternal,
+		Sourcemap:         esbuild.SourceMapLinked,
 		Platform:          esbuild.PlatformBrowser,
 		Format:            esbuild.FormatESModule,
 		JSXMode:           esbuild.JSXModeAutomatic,
