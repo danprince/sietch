@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/adrg/frontmatter"
 	chromaHtml "github.com/alecthomas/chroma/formatters/html"
 	"github.com/danprince/sietch/internal/errors"
+	"github.com/danprince/sietch/internal/islands"
 	"github.com/danprince/sietch/internal/markdown"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
@@ -29,6 +31,8 @@ var defaultTemplateHtml []byte
 
 // Builder's hold all the necessary information to produce a static site.
 type builder struct {
+	// True when in development mode with a server
+	dev bool
 	// Working directory the command was run.
 	rootDir string
 	// Directory to start scan for markdown pages.
@@ -51,6 +55,10 @@ type builder struct {
 	assets []*Asset
 	// Configured markdown parser/renderer
 	markdown goldmark.Markdown
+	// Islands for every single page
+	globalIslands islands.Ctx
+	// Frontend framework for rendering islands
+	islandsFramework islands.Framework
 }
 
 // A page represents a single markdown file in the pagesDir.
@@ -65,6 +73,7 @@ type Page struct {
 	depth          int
 	outPath        string
 	contentsOffset int
+	islands        islands.Ctx
 }
 
 // An asset is a non-markdown file that will be copied directly to the output.
@@ -79,11 +88,13 @@ func builderWithDefaults(rootDir string) builder {
 	configFile := path.Join(rootDir, ".sietch.json")
 
 	return builder{
-		rootDir:      rootDir,
-		pagesDir:     pagesDir,
-		outDir:       outDir,
-		templateFile: templateFile,
-		configFile:   configFile,
+		rootDir:          rootDir,
+		pagesDir:         pagesDir,
+		outDir:           outDir,
+		templateFile:     templateFile,
+		configFile:       configFile,
+		globalIslands:    islands.NewContext(rootDir),
+		islandsFramework: islands.PreactCDN,
 	}
 }
 
@@ -93,6 +104,7 @@ func (b *builder) reset() {
 	b.dirs = nil
 	b.pages = nil
 	b.assets = nil
+	b.globalIslands = islands.NewContext(b.rootDir)
 }
 
 // Scan, parse, and compile the entire site.
@@ -203,6 +215,7 @@ func (b *builder) scan() error {
 				path:    relPath,
 				depth:   depth,
 				outPath: outPath,
+				islands: islands.NewContext(path.Dir(absPath)),
 			}
 
 			b.pages = append(b.pages, &page)
@@ -217,7 +230,7 @@ func (b *builder) scan() error {
 // Creates the default set of functions that will be available in any page
 // templates. Functions that work with the file system will run as in the
 // `dir` directory.
-func (b *builder) templateFuncs(dir string) template.FuncMap {
+func (b *builder) templateFuncs(dir string, ctx *islands.Ctx) template.FuncMap {
 	return template.FuncMap{
 		"include": func(name string) string {
 			contents, err := os.ReadFile(path.Join(dir, name))
@@ -267,18 +280,31 @@ func (b *builder) templateFuncs(dir string) template.FuncMap {
 
 			return pages
 		},
-		"attrs": func(kvs ...any) map[string]any {
+		"props": func(kvs ...any) map[string]any {
 			m := make(map[string]any, len(kvs)/2)
 
-			for i, k := range kvs {
-				val := kvs[i+1]
-				key, ok := k.(string)
-				if ok {
-					m[key] = val
+			for i := 0; i < len(kvs)-1; i++ {
+				k := kvs[i]
+				v := kvs[i+1]
+				if key, ok := k.(string); ok {
+					m[key] = v
 				}
 			}
 
 			return m
+		},
+		"render": func(entryPoint string, props map[string]any) *islands.Element {
+			return ctx.AddElement(entryPoint, props)
+		},
+		"clientOnly": func(el *islands.Element) *islands.Element {
+			el.CSR = true
+			el.SSR = false
+			return el
+		},
+		"clientLoad": func(el *islands.Element) *islands.Element {
+			el.SSR = true
+			el.CSR = true
+			return el
 		},
 	}
 }
@@ -320,7 +346,7 @@ func (b *builder) readTemplates() error {
 		b.templateFile = "template.html"
 	}
 
-	funcs := b.templateFuncs(b.pagesDir)
+	funcs := b.templateFuncs(b.pagesDir, &b.globalIslands)
 	template, err := template.New("template").Funcs(funcs).Parse(string(contents))
 
 	if err != nil {
@@ -424,7 +450,7 @@ func (b *builder) buildPages() error {
 func (b *builder) buildPage(page *Page) error {
 	// Parse and execute the page's own template
 	text := page.Contents
-	funcs := b.templateFuncs(path.Join(b.pagesDir, page.dir))
+	funcs := b.templateFuncs(path.Join(b.pagesDir, page.dir), &page.islands)
 	tpl, err := template.New("page").Funcs(funcs).Parse(text)
 
 	if err != nil {
@@ -461,8 +487,49 @@ func (b *builder) buildPage(page *Page) error {
 
 	page.Contents = pageBuf.String()
 
+	if len(page.islands.Elements) > 0 {
+		staticHtml, err := page.islands.CreateStaticHtml(&b.islandsFramework)
+
+		if err != nil {
+			return err
+		}
+
+		for marker, html := range staticHtml {
+			page.Contents = strings.Replace(page.Contents, marker, html, 1)
+		}
+
+		assetsDir := path.Join(b.outDir, "_assets")
+
+		result, err := page.islands.CreateRuntime(islands.RuntimeOptions{
+			Framework:  &b.islandsFramework,
+			OutDir:     path.Join(assetsDir, page.path),
+			Production: !b.dev,
+		})
+
+		if err != nil {
+			return err
+		}
+
+		var scriptTags strings.Builder
+		var linkTags strings.Builder
+
+		for _, src := range result.Scripts {
+			src = strings.TrimPrefix(src, b.outDir)
+			scriptTags.WriteString(fmt.Sprintf(`<script type="module" src="%s"></script>`, src))
+		}
+
+		for _, href := range result.Links {
+			href = strings.TrimPrefix(href, b.outDir)
+			scriptTags.WriteString(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, href))
+		}
+
+		// Inject bundled scripts into the page
+		page.Contents = strings.Replace(page.Contents, "</head>", linkTags.String()+"</head>", 1)
+		page.Contents = strings.Replace(page.Contents, "</body>", scriptTags.String()+"</body>", 1)
+	}
+
 	// Finally, write to disk
-	err = os.WriteFile(path.Join(b.outDir, page.outPath), pageBuf.Bytes(), os.ModePerm)
+	err = os.WriteFile(path.Join(b.outDir, page.outPath), []byte(page.Contents), os.ModePerm)
 
 	if err != nil {
 		return err
