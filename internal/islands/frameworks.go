@@ -8,6 +8,7 @@ import (
 
 var React = Framework{
 	importMap: map[string]string{},
+	jsxImportSource: "react/jsx-runtime",
 	createRenderScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
 
@@ -67,6 +68,7 @@ var React = Framework{
 
 var Preact = Framework{
 	importMap: map[string]string{},
+	jsxImportSource: "preact/jsx-runtime",
 	createRenderScript: func(ctx *Ctx) (string, error) {
 		var script strings.Builder
 
@@ -128,7 +130,9 @@ var PreactCDN = Framework{
 		"preact":                  "https://esm.sh/preact@10.7.2",
 		"preact/hooks":            "https://esm.sh/preact@10.7.2/hooks",
 		"preact-render-to-string": "https://esm.sh/preact-render-to-string@5.2.0?external=preact",
+		"preact/jsx-runtime":      "https://esm.sh/preact@10.7.2/jsx-runtime",
 	},
+	jsxImportSource:     "https://esm.sh/preact@10.7.2",
 	createRenderScript:  Preact.createRenderScript,
 	createHydrateScript: Preact.createHydrateScript,
 }
@@ -139,6 +143,7 @@ var ReactCDN = Framework{
 		"react-dom":        "https://esm.sh/react-dom@17.0.2",
 		"react-dom/server": "https://esm.sh/react-dom@17.0.2/server",
 	},
+	jsxImportSource:     "https://esm.sh/react-dom@17.0.2",
 	createRenderScript:  React.createRenderScript,
 	createHydrateScript: React.createHydrateScript,
 }

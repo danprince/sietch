@@ -29,6 +29,7 @@ type Ctx struct {
 
 type Framework struct {
 	importMap           map[string]string
+	jsxImportSource     string
 	createRenderScript  func(ctx *Ctx) (string, error)
 	createHydrateScript func(ctx *Ctx) (string, error)
 }
@@ -134,7 +135,8 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (runtime, error) {
 		Sourcemap:         esbuild.SourceMapExternal,
 		Platform:          esbuild.PlatformBrowser,
 		Format:            esbuild.FormatESModule,
-		JSXMode:           esbuild.JSXModeTransform,
+		JSXMode:           esbuild.JSXModeAutomatic,
+		JSXImportSource:   options.Framework.jsxImportSource,
 		Plugins: []esbuild.Plugin{
 			virtualEntryPlugin(virtualEntryPoint{
 				name:       "@sietch/client",
@@ -195,13 +197,14 @@ func (ctx *Ctx) staticBundle(framework *Framework) (string, error) {
 			Loader:     esbuild.LoaderJS,
 			ResolveDir: ctx.ResolveDir,
 		},
-		Write:     false,
-		Outdir:    "/tmp", // no-op because `Write` is false but still required for asset imports
-		Bundle:    true,
-		Sourcemap: esbuild.SourceMapInline,
-		Platform:  esbuild.PlatformNeutral,
-		Format:    esbuild.FormatIIFE,
-		JSXMode:   esbuild.JSXModeTransform,
+		Write:           false,
+		Outdir:          "/tmp", // no-op because `Write` is false but still required for asset imports
+		Bundle:          true,
+		Sourcemap:       esbuild.SourceMapInline,
+		Platform:        esbuild.PlatformNeutral,
+		Format:          esbuild.FormatIIFE,
+		JSXMode:         esbuild.JSXModeAutomatic,
+		JSXImportSource: framework.jsxImportSource,
 		Plugins: []esbuild.Plugin{
 			httpImportMapPlugin(framework.importMap),
 			httpImportsPlugin(),
