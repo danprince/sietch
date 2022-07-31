@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	esbuild "github.com/evanw/esbuild/pkg/api"
 	"rogchap.com/v8go"
@@ -32,6 +33,35 @@ type Framework struct {
 	jsxImportSource     string
 	createRenderScript  func(ctx *Ctx) (string, error)
 	createHydrateScript func(ctx *Ctx) (string, error)
+}
+
+var loader = map[string]esbuild.Loader{
+	".aac":         esbuild.LoaderFile,
+	".css":         esbuild.LoaderFile,
+	".eot":         esbuild.LoaderFile,
+	".flac":        esbuild.LoaderFile,
+	".gif":         esbuild.LoaderFile,
+	".ico":         esbuild.LoaderFile,
+	".jpeg":        esbuild.LoaderFile,
+	".jpg":         esbuild.LoaderFile,
+	".js":          esbuild.LoaderJS,
+	".jsx":         esbuild.LoaderJSX,
+	".json":        esbuild.LoaderJSON,
+	".mp3":         esbuild.LoaderFile,
+	".mp4":         esbuild.LoaderFile,
+	".ogg":         esbuild.LoaderFile,
+	".otf":         esbuild.LoaderFile,
+	".png":         esbuild.LoaderFile,
+	".svg":         esbuild.LoaderFile,
+	".ts":          esbuild.LoaderTS,
+	".tsx":         esbuild.LoaderTSX,
+	".ttf":         esbuild.LoaderFile,
+	".wav":         esbuild.LoaderFile,
+	".webm":        esbuild.LoaderFile,
+	".webmanifest": esbuild.LoaderFile,
+	".webp":        esbuild.LoaderFile,
+	".woff":        esbuild.LoaderFile,
+	".woff2":       esbuild.LoaderFile,
 }
 
 func NewContext(resolveDir string) Ctx {
@@ -79,24 +109,11 @@ func (e *Element) String() string {
 	return fmt.Sprintf(`<div id="%s">%s</div>`, e.id, e.marker)
 }
 
-func (ctx *Ctx) CreateStaticHtml(framework *Framework) (map[string]string, error) {
-	if !ctx.needsSSR() {
-		return map[string]string{}, nil
-	}
-
-	code, err := ctx.staticBundle(framework)
-
-	if err != nil {
-		return nil, err
-	}
-
-	staticHtml, err := ctx.runInV8(code)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return staticHtml, nil
+type BundleOptions struct {
+	Framework  *Framework
+	OutDir     string
+	PublicPath string
+	Production bool
 }
 
 type RuntimeResult struct {
@@ -104,13 +121,7 @@ type RuntimeResult struct {
 	Links   []string
 }
 
-type RuntimeOptions struct {
-	Framework  *Framework
-	OutDir     string
-	Production bool
-}
-
-func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
+func (ctx *Ctx) CreateRuntime(options *BundleOptions) (RuntimeResult, error) {
 	script, err := options.Framework.createHydrateScript(ctx)
 
 	if err != nil {
@@ -137,6 +148,8 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 		Format:            esbuild.FormatESModule,
 		JSXMode:           esbuild.JSXModeAutomatic,
 		JSXImportSource:   options.Framework.jsxImportSource,
+		PublicPath:        options.PublicPath,
+		Loader:            loader,
 		Plugins: []esbuild.Plugin{
 			virtualModulesPlugin(map[string]virtualModule{
 				"@sietch/client": {
@@ -185,8 +198,28 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 	}, nil
 }
 
-func (ctx *Ctx) staticBundle(framework *Framework) (string, error) {
-	script, err := framework.createRenderScript(ctx)
+func (ctx *Ctx) CreateStaticHtml(options *BundleOptions) (map[string]string, error) {
+	if !ctx.needsSSR() {
+		return map[string]string{}, nil
+	}
+
+	code, err := ctx.staticBundle(options)
+
+	if err != nil {
+		return nil, err
+	}
+
+	staticHtml, err := ctx.runInV8(code)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return staticHtml, nil
+}
+
+func (ctx *Ctx) staticBundle(options *BundleOptions) (string, error) {
+	script, err := options.Framework.createRenderScript(ctx)
 
 	if err != nil {
 		return "", err
@@ -199,15 +232,17 @@ func (ctx *Ctx) staticBundle(framework *Framework) (string, error) {
 			ResolveDir: ctx.ResolveDir,
 		},
 		Write:           false,
-		Outdir:          "/tmp", // no-op because `Write` is false but still required for asset imports
 		Bundle:          true,
+		Outdir:          options.OutDir,
 		Sourcemap:       esbuild.SourceMapInline,
 		Platform:        esbuild.PlatformNeutral,
 		Format:          esbuild.FormatIIFE,
 		JSXMode:         esbuild.JSXModeAutomatic,
-		JSXImportSource: framework.jsxImportSource,
+		JSXImportSource: options.Framework.jsxImportSource,
+		Loader:          loader,
+		PublicPath:      options.PublicPath,
 		Plugins: []esbuild.Plugin{
-			httpImportsPlugin(framework.importMap),
+			httpImportsPlugin(options.Framework.importMap),
 		},
 	})
 
@@ -221,10 +256,20 @@ func (ctx *Ctx) staticBundle(framework *Framework) (string, error) {
 		return "", errors.New(err.Text)
 	}
 
+	var outfile esbuild.OutputFile
+
+	// Make sure we pick the correct file from the outputs, sometimes there
+	// will be other assets here (e.g. images).
+	for _, file := range result.OutputFiles {
+		if strings.HasSuffix(file.Path, "stdin.js") {
+			outfile = file
+		}
+	}
+
 	// The static bundle that esbuild produces renders each of the elements into
 	// a global variable called `$`. A reference to `$` needs to be the final
 	// thing in this script so that the script evaluates to the correct value.
-	js := string(result.OutputFiles[0].Contents) + ";$"
+	js := string(outfile.Contents) + ";$"
 
 	return js, nil
 }

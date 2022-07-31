@@ -508,7 +508,17 @@ func (b *builder) renderIslands(page *Page) error {
 		return nil
 	}
 
-	staticHtml, err := page.islands.CreateStaticHtml(&b.islandsFramework)
+	assetsDir := path.Join(b.outDir, "_assets")
+	outDir := path.Join(assetsDir, page.Url)
+
+	bundleOptions := &islands.BundleOptions{
+		Framework:  &b.islandsFramework,
+		OutDir:     outDir,
+		PublicPath: strings.TrimPrefix(assetsDir, b.outDir),
+		Production: !b.dev,
+	}
+
+	staticHtml, err := page.islands.CreateStaticHtml(bundleOptions)
 
 	if err != nil {
 		return err
@@ -518,13 +528,7 @@ func (b *builder) renderIslands(page *Page) error {
 		page.Contents = strings.Replace(page.Contents, marker, html, 1)
 	}
 
-	assetsDir := path.Join(b.outDir, "_assets")
-
-	result, err := page.islands.CreateRuntime(islands.RuntimeOptions{
-		Framework:  &b.islandsFramework,
-		OutDir:     path.Join(assetsDir, page.Url),
-		Production: !b.dev,
-	})
+	result, err := page.islands.CreateRuntime(bundleOptions)
 
 	if err != nil {
 		return err
