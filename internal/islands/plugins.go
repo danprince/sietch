@@ -15,39 +15,6 @@ import (
 
 var httpImportNamespace = "http-import"
 
-func httpExternalsPlugin(importMap map[string]string, preloadModules *[]string) api.Plugin {
-	var names []string
-
-	for name := range importMap {
-		names = append(names, name)
-	}
-
-	modulesFilter := fmt.Sprintf(`^(%s)$`, strings.Join(names, "|"))
-
-	return api.Plugin{
-		Name: "esbuild-http-import-map-plugin",
-		Setup: func(build api.PluginBuild) {
-			resolve := func(args api.OnResolveArgs) (api.OnResolveResult, error) {
-				resolved, ok := importMap[args.Path]
-
-				if !ok {
-					resolved = args.Path
-				}
-
-				*preloadModules = append(*preloadModules, resolved)
-
-				return api.OnResolveResult{
-					Path:     resolved,
-					External: true,
-				}, nil
-			}
-
-			build.OnResolve(api.OnResolveOptions{Filter: modulesFilter}, resolve)
-			build.OnResolve(api.OnResolveOptions{Filter: `^https?://`}, resolve)
-		},
-	}
-}
-
 type virtualEntryPoint struct {
 	name       string
 	contents   *string

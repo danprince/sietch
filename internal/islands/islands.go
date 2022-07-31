@@ -100,9 +100,8 @@ func (ctx *Ctx) CreateStaticHtml(framework *Framework) (map[string]string, error
 }
 
 type RuntimeResult struct {
-	Scripts        []string
-	Links          []string
-	PreloadModules []string
+	Scripts []string
+	Links   []string
 }
 
 type RuntimeOptions struct {
@@ -123,8 +122,6 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 	if options.Production {
 		entryNames = "[hash]"
 	}
-
-	preloadModules := []string{}
 
 	result := esbuild.Build(esbuild.BuildOptions{
 		EntryPoints:       []string{"@sietch/client"},
@@ -147,9 +144,7 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 				resolveDir: ctx.ResolveDir,
 				loader:     esbuild.LoaderJS,
 			}),
-			// TODO: Decide whether to bundle or externalise HTTP imports
-			//httpImportsPlugin(options.Framework.HttpImportMap),
-			httpExternalsPlugin(options.Framework.importMap, &preloadModules),
+			httpImportsPlugin(options.Framework.importMap),
 		},
 	})
 
@@ -184,9 +179,8 @@ func (ctx *Ctx) CreateRuntime(options RuntimeOptions) (RuntimeResult, error) {
 	}
 
 	return RuntimeResult{
-		Scripts:        scripts,
-		Links:          links,
-		PreloadModules: preloadModules,
+		Scripts: scripts,
+		Links:   links,
 	}, nil
 }
 

@@ -543,10 +543,6 @@ func (b *builder) renderIslands(page *Page) error {
 		linkTags.WriteString(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, href))
 	}
 
-	for _, href := range result.PreloadModules {
-		linkTags.WriteString(fmt.Sprintf(`<link rel="modulepreload" href="%s">`, href))
-	}
-
 	// Inject bundled scripts into the page
 	page.Contents = strings.Replace(page.Contents, "</head>", linkTags.String()+"</head>", 1)
 	page.Contents = strings.Replace(page.Contents, "</body>", scriptTags.String()+"</body>", 1)
