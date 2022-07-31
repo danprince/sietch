@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo, useEffect } from "preact/hooks";
 
 const URL_REGEX = /(?:https?:\/\/)?(?:[^\s.]+\.)+[^A-Z\s.][/\w?&=]+/;

@@ -94,7 +94,7 @@ func builderWithDefaults(rootDir string) builder {
 		templateFile:     templateFile,
 		configFile:       configFile,
 		globalIslands:    islands.NewContext(rootDir),
-		islandsFramework: islands.PreactCDN,
+		islandsFramework: islands.Preact,
 	}
 }
 
