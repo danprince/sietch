@@ -37,7 +37,7 @@ type Framework struct {
 
 var loader = map[string]esbuild.Loader{
 	".aac":         esbuild.LoaderFile,
-	".css":         esbuild.LoaderFile,
+	".css":         esbuild.LoaderCSS,
 	".eot":         esbuild.LoaderFile,
 	".flac":        esbuild.LoaderFile,
 	".gif":         esbuild.LoaderFile,
