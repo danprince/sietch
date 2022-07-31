@@ -1,5 +1,6 @@
 ---
 title: Playground
+index: true
 ---
 
 I only render at the server.
