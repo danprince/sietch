@@ -20,7 +20,6 @@ import (
 	"github.com/danprince/sietch/internal/markdown"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/sync/errgroup"
 )
@@ -87,6 +86,7 @@ func builderWithDefaults(rootDir string) builder {
 		configFile:   configFile,
 	}
 }
+
 // Reset the internal state of the builder to prevent memory leaks across
 // successive rebuilds.
 func (b *builder) reset() {
@@ -149,13 +149,11 @@ func (b *builder) setup() {
 	}
 
 	b.markdown = goldmark.New(
-		goldmark.WithParserOptions(
-			parser.WithAutoHeadingID(),
-		),
 		goldmark.WithExtensions(
 			extension.GFM,
 			extension.Footnote,
 			markdown.Links,
+			markdown.Headings,
 			markdown.NewHighlighting(
 				syntaxStyle,
 				chromaHtml.WithClasses(withClasses),
