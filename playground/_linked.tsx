@@ -45,12 +45,7 @@ const Linked = ({ children }: LinkedProps) => {
     });
   }, [children]);
 
-  useEffect(() => {
-      throw new Error("ffs")
-  }, []);
-
   return (
-    // Hack to prevent us needing to provide keys for the children
     <>{newChildren}</>
   );
 };
