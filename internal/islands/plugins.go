@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"sync"
 
@@ -154,20 +156,32 @@ func httpImportsPlugin() api.Plugin {
 	}
 }
 
+var cacheDir = path.Join(os.TempDir(), ".sietch/http-imports")
 var cachedModules = map[string]string{}
 var cachedModulesLock sync.Mutex
 
-// TODO: Speed this up with a disk cache
-func downloadWithCache(url string) (string, error) {
+func init() {
+	os.MkdirAll(cacheDir, os.ModePerm)
+	dirents, _ := os.ReadDir(cacheDir)
+	for _, dirent := range dirents {
+		if !dirent.IsDir() {
+			name, _ := url.QueryUnescape(dirent.Name())
+			contents, _ := os.ReadFile(path.Join(cacheDir, dirent.Name()))
+			cachedModules[name] = string(contents)
+		}
+	}
+}
+
+func downloadWithCache(href string) (string, error) {
 	cachedModulesLock.Lock()
-	mod, ok := cachedModules[url]
+	mod, ok := cachedModules[href]
 	cachedModulesLock.Unlock()
 
 	if ok {
 		return mod, nil
 	}
 
-	res, err := http.Get(url)
+	res, err := http.Get(href)
 	if err != nil {
 		return "", err
 	}
@@ -180,7 +194,9 @@ func downloadWithCache(url string) (string, error) {
 	contents := string(out)
 
 	cachedModulesLock.Lock()
-	cachedModules[url] = contents
+	cachedModules[href] = contents
+	name := url.QueryEscape(href)
+	os.WriteFile(path.Join(cacheDir, name), []byte(contents), os.ModePerm)
 	cachedModulesLock.Unlock()
 
 	return contents, nil
