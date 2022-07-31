@@ -244,6 +244,29 @@ func (b *builder) templateFuncs(dir string) template.FuncMap {
 
 			return siblings
 		},
+		"nav": func() []*Page {
+			var pages []*Page
+
+			for _, page := range b.pages {
+				if val, ok := page.Data["nav"]; ok && val != false {
+					pages = append(pages, page)
+				}
+			}
+
+			sort.SliceStable(pages, func(i, j int) bool {
+				a := pages[i].Data["nav"]
+				b := pages[j].Data["nav"]
+				priorityA, okA := a.(int)
+				priorityB, okB := b.(int)
+				if okA && okB {
+					return priorityA < priorityB
+				} else {
+					return false
+				}
+			})
+
+			return pages
+		},
 		"attrs": func(kvs ...any) map[string]any {
 			m := make(map[string]any, len(kvs)/2)
 
