@@ -93,7 +93,7 @@ func builderWithDefaults(rootDir string) builder {
 		outDir:           outDir,
 		templateFile:     templateFile,
 		configFile:       configFile,
-		globalIslands:    islands.NewContext(rootDir),
+		globalIslands:    islands.NewContext(rootDir, "<template>"),
 		islandsFramework: islands.Preact,
 	}
 }
@@ -104,7 +104,7 @@ func (b *builder) reset() {
 	b.dirs = nil
 	b.pages = nil
 	b.assets = nil
-	b.globalIslands = islands.NewContext(b.rootDir)
+	b.globalIslands = islands.NewContext(b.rootDir, "<template>")
 }
 
 // Scan, parse, and compile the entire site.
@@ -215,7 +215,7 @@ func (b *builder) scan() error {
 				path:    relPath,
 				depth:   depth,
 				outPath: outPath,
-				islands: islands.NewContext(path.Dir(absPath)),
+				islands: islands.NewContext(path.Dir(absPath), relPath),
 			}
 
 			b.pages = append(b.pages, &page)

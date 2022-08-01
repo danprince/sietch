@@ -20,7 +20,7 @@ var Preact = Framework{
 		if ctx.needsSSR() {
 			script.WriteString("import { h } from 'preact'\n")
 			script.WriteString("import { render } from 'preact-render-to-string';\n")
-			script.WriteString("globalThis.$ = {};")
+			script.WriteString("globalThis.$ = {};\n")
 		}
 
 		for id, el := range ctx.Elements {
@@ -31,8 +31,8 @@ var Preact = Framework{
 					return "", err
 				}
 
-				imports := fmt.Sprintf("import %s from '%s';", id, el.entryPoint)
-				renders := fmt.Sprintf("$['%s'] = render(h(%s, %s));", el.marker, id, string(props))
+				imports := fmt.Sprintf("import %s from '%s';\n", id, el.entryPoint)
+				renders := fmt.Sprintf("$['%s'] = render(h(%s, %s));\n", el.marker, id, string(props))
 				script.WriteString(imports)
 				script.WriteString(renders)
 			}
@@ -56,7 +56,7 @@ var Preact = Framework{
 				}
 
 				element := fmt.Sprintf("document.getElementById('%s')", id)
-				imports := fmt.Sprintf("import %s from '%s';", id, el.entryPoint)
+				imports := fmt.Sprintf("import %s from '%s';\n", id, el.entryPoint)
 				renders := fmt.Sprintf("hydrate(h(%s, %s), %s);\n", id, string(props), element)
 				script.WriteString(imports)
 				script.WriteString(renders)

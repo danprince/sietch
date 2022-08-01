@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/evanw/esbuild/pkg/api"
 )
 
 const (
@@ -164,6 +166,23 @@ func ParseJsonError(err error, file string, src string) error {
 	}
 
 	return err
+}
+
+func BundleError(err api.Message, filename string) error {
+	file := err.Location.File
+
+	if file == "<stdin>" {
+		file = filename
+	}
+
+	return &codeFrameError{
+		summary: "bundle error",
+		file:    file,
+		line:    1,
+		offset:  err.Location.Line,
+		src:     err.Location.LineText,
+		msg:     err.Text,
+	}
 }
 
 func FmtError(err error) string {

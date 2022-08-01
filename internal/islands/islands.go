@@ -18,6 +18,7 @@ type Element struct {
 }
 
 type Ctx struct {
+	Filename   string
 	ResolveDir string
 	Elements   map[string]*Element
 }
@@ -29,9 +30,10 @@ type Framework struct {
 	createHydrateScript func(ctx *Ctx) (string, error)
 }
 
-func NewContext(resolveDir string) Ctx {
+func NewContext(resolveDir string, filename string) Ctx {
 	return Ctx{
 		ResolveDir: resolveDir,
+		Filename:   filename,
 		Elements:   map[string]*Element{},
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	_errors "github.com/danprince/sietch/internal/errors"
 	"github.com/evanw/esbuild/pkg/api"
 	"rogchap.com/v8go"
 )
@@ -189,13 +190,7 @@ func (ctx *Ctx) staticRender(options *BundleOptions) (Render, error) {
 	})
 
 	for _, err := range result.Errors {
-		// TODO: Use better errors
-		fmt.Println("STATIC BUNDLE ERROR", err)
-	}
-
-	for _, err := range result.Errors {
-		// TODO: Use better errors
-		return Render{}, errors.New(err.Text)
+		return Render{}, _errors.BundleError(err, ctx.Filename)
 	}
 
 	var outfile api.OutputFile
