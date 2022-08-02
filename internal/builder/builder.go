@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"github.com/danprince/sietch/internal/mdext"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/sync/errgroup"
 )
@@ -103,7 +105,13 @@ func (b *Builder) Build() error {
 // Configure everything required to start building.
 func (b *Builder) configure() {
 	b.markdown = goldmark.New(
-		goldmark.WithExtensions(),
+		goldmark.WithExtensions(
+			extension.GFM,
+			extension.Footnote,
+			mdext.ExternalLinks,
+			mdext.HeadingAnchors,
+			mdext.NewSyntaxHighlighting("algol_nu"),
+		),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(),
 		),
