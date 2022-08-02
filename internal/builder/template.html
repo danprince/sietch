@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {{ if .Data.title -}}
+      <title>{{ .Data.title }}</title>
+    {{- end }}
+  </head>
+  <body>
+    <main>
+      <nav class="sans">
+        {{ range pagesWith "nav" | sortBy "nav" -}}
+          <a href="{{ .Url }}" class="{{ if eq .Url $.Url -}} active {{- end }}">
+            {{- .Data.title -}}
+          </a>
+        {{- end }}
+      </nav>
+
+      {{ if .Data.title -}}
+        <h1>{{ .Data.title }}</h1>
+      {{- end }}
+
+      {{ if not .Date.IsZero -}}
+        <time class="sans">{{ .Date.Format "Jan 2, 2006" }}</time>
+      {{- end }}
+
+      {{- .Contents -}}
+
+      {{ if (eq .Data.index true) -}}
+        <ul>
+          {{ range index -}}
+            <li>
+              <a href="{{- .Url -}}">
+                {{- .Data.title -}}
+              </a>
+            </li>
+          {{- end }}
+        </ul>
+      {{- end }}
+    </main>
+    <style>
+body {
+  font: 1.17rem/1.6 Georgia, 'Times New Roman', serif;
+  padding: 2rem 0 8em 0;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  margin-bottom: 64px;
+  color: #111;
+}
+
+h1, h2, h3, h4, .sans {
+  font-family: 'Helvetica Neue', 'Arial Nova', Helvetica, Arial, sans-serif;
+  margin-bottom: 0;
+}
+
+h2, h3, h4 {
+  margin-top: 2em;
+}
+
+nav {
+  margin-top: 32px;
+  display: flex;
+  gap: 32px;
+}
+
+nav a {
+  text-decoration: none;
+  color: black;
+  font-weight: bold;
+}
+
+nav .active {
+  text-decoration: underline;
+}
+
+pre, code {
+  font-family: Consolas, Menlo, Monaco, monospace;
+  font-size: 1rem;
+  border-radius: 4px;
+  background-color: ghostwhite;
+  padding: 4px;
+}
+
+pre code {
+  padding: 0;
+  background: none;
+}
+
+pre {
+  padding: 12px;
+  overflow-x: auto;
+}
+
+main > pre {
+  margin-left: -12px;
+}
+
+img, svg {
+  max-width: 100%;
+}
+
+.permalink {
+  color: inherit;
+  text-decoration: none;
+}
+    </style>
+  </body>
+</html>
