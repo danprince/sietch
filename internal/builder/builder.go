@@ -39,7 +39,7 @@ type Builder struct {
 	OutDir       string
 	template     *template.Template
 	templateFile string
-	pages        map[string]*Page
+	pages        []*Page
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
 	framework    Framework
@@ -122,7 +122,7 @@ func New(dir string) *Builder {
 		OutDir:       path.Join(dir, "_site"),
 		AssetsDir:    path.Join(dir, "_site/_assets"),
 		templateFile: path.Join(dir, "_template.html"),
-		pages:        map[string]*Page{},
+		pages:        []*Page{},
 		index:        map[string][]*Page{},
 		framework:    Vanilla,
 	}
@@ -335,7 +335,7 @@ func (b *Builder) addPage(relPath string) {
 	}
 
 	b.index[parent] = append(b.index[parent], page)
-	b.pages[relPath] = page
+	b.pages = append(b.pages, page)
 }
 
 // Read all pages in the site concurrently.

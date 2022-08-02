@@ -48,16 +48,23 @@ func expectInFile(t *testing.T, b *Builder, filename, search string) {
 	body := string(contents)
 
 	if !strings.Contains(body, search) {
-		t.Errorf(`%s did not contain "%s"\n\n%s`, filename, search, body)
+		t.Errorf("%s did not contain \"%s\"\n\n%s", filename, search, body)
 	}
 }
 
 // Expect a page to exist and return it. This throws much friendlier errors
 // than de-referencing a nil pointer instead.
-func expectPage(t *testing.T, b *Builder, p string) *Page {
-	page := b.pages[p]
+func expectPage(t *testing.T, b *Builder, pth string) *Page {
+	var page *Page
+
+	for _, p := range b.pages {
+		if p.Path == pth {
+			page = p
+		}
+	}
+
 	if page == nil {
-		t.Fatalf(`expected page to exist: %s`, p)
+		t.Fatalf(`expected page to exist: %s`, pth)
 	}
 	return page
 }
@@ -270,7 +277,7 @@ func TestSortByTemplateFunc(t *testing.T) {
 		"_template.html": `{{ .Contents }}`,
 		"a.md": `---
 title: A
-nav: true
+nav: 1
 ---`,
 		"b.md": `---
 title: B
@@ -290,4 +297,16 @@ nav: 3
 
 	buildWithoutErrors(t, b)
 	expectInFile(t, b, "index.html", `<nav>ABC</nav>`)
+}
+
+func TestStaticIsland(t *testing.T) {
+	b := newTestBuilder(t, tfs{
+		"hello.ts": `
+export let render = ({ name }) => "<h1>" + name + "</h1>";
+`,
+		"index.md": `{{ render "./hello" (props "name" "dan") }}`,
+	})
+
+	buildWithoutErrors(t, b)
+	expectInFile(t, b, "index.html", `<h1>dan</h1>`)
 }
