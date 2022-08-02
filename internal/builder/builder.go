@@ -130,8 +130,8 @@ func New(dir string) *Builder {
 
 // Resets the state of a builder to prevent leaking memory across builds.
 func (b *Builder) Reset() {
-	b.pages = nil
-	b.index = nil
+	b.pages = []*Page{}
+	b.index = map[string][]*Page{}
 }
 
 // Builds the site.
