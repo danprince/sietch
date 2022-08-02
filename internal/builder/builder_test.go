@@ -38,7 +38,7 @@ func newTestBuilder(t *testing.T, fs tfs) *Builder {
 // Expect to find a given string inside the contents of a file, relative
 // to the builder's outDir.
 func expectInFile(t *testing.T, b *Builder, filename, search string) {
-	filename = path.Join(b.outDir, filename)
+	filename = path.Join(b.OutDir, filename)
 	contents, err := os.ReadFile(filename)
 
 	if err != nil {
@@ -73,12 +73,12 @@ func buildWithoutErrors(t *testing.T, b *Builder) {
 
 func TestBuild(t *testing.T) {
 	b := newTestBuilder(t, tfs{
-		"index.md": "# Hello",
+		"index.md": "_Hello!_",
 	})
 
 	buildWithoutErrors(t, b)
 
-	expectInFile(t, b, "index.html", `<h1>Hello</h1>`)
+	expectInFile(t, b, "index.html", `<em>Hello!</em>`)
 
 	if len(b.pages) != 1 {
 		t.Errorf("expected 1 page, got %d", len(b.pages))

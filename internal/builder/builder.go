@@ -280,8 +280,8 @@ func (b *Builder) readPage(page *Page) error {
 	date := page.Data["date"]
 	if date != nil {
 		if s, ok := date.(string); ok {
-			if t, err := time.ParseInLocation("2006-1-2", s, time.Local); err == nil {
-				page.Date = t.Local()
+			if t, err := time.Parse("2006-1-2", s); err == nil {
+				page.Date = t
 			}
 		}
 	}
