@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"github.com/alecthomas/chroma/styles"
 	"github.com/danprince/sietch/internal/livereload"
 	"github.com/danprince/sietch/internal/mdext"
 	"github.com/evanw/esbuild/pkg/api"
@@ -27,16 +28,22 @@ import (
 	"rogchap.com/v8go"
 )
 
-var iso = v8go.NewIsolate()
-
-//go:embed template.html
-var defaultTemplateHtml []byte
-
 type Mode uint8
 
 const (
 	Development Mode = iota
 	Production
+)
+
+var (
+	iso = v8go.NewIsolate()
+
+	//go:embed template.html
+	defaultTemplateHtml []byte
+
+	frameworkMap = map[string]Framework{
+		"vanilla": Vanilla,
+	}
 )
 
 // Manages the state of the site throughout the duration of the process.
@@ -48,10 +55,24 @@ type Builder struct {
 	Mode         Mode
 	template     *template.Template
 	templateFile string
+	config       Config
+	configFile   string
 	pages        []*Page
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
 	framework    Framework
+}
+
+type Config struct {
+	SyntaxColor string
+	Framework   string
+	DateFormat  string
+}
+
+var defaultConfig = Config{
+	SyntaxColor: "algol_nu",
+	Framework:   "vanilla",
+	DateFormat:  "2006-1-2",
 }
 
 // Frameworks decide how to create the entry point files for bundling islands.
@@ -132,6 +153,8 @@ func New(dir string, mode Mode) *Builder {
 		OutDir:       path.Join(dir, "_site"),
 		AssetsDir:    path.Join(dir, "_site/_assets"),
 		templateFile: path.Join(dir, "_template.html"),
+		configFile:   path.Join(dir, ".sietch.json"),
+		config:       defaultConfig,
 		pages:        []*Page{},
 		index:        map[string][]*Page{},
 		framework:    Vanilla,
@@ -140,6 +163,7 @@ func New(dir string, mode Mode) *Builder {
 
 // Resets the state of a builder to prevent leaking memory across builds.
 func (b *Builder) Reset() {
+	b.config = defaultConfig
 	b.pages = []*Page{}
 	b.index = map[string][]*Page{}
 }
@@ -148,7 +172,15 @@ func (b *Builder) Reset() {
 func (b *Builder) Build() error {
 	var err error
 
-	b.configure()
+	err = b.readConfig()
+	if err != nil {
+		return err
+	}
+
+	err = b.applyConfig()
+	if err != nil {
+		return err
+	}
 
 	err = b.readTemplate()
 	if err != nil {
@@ -192,20 +224,49 @@ func (b *Builder) Build() error {
 	return nil
 }
 
+// Read and parse the site's global page template.
+func (b *Builder) readConfig() error {
+	contents, err := os.ReadFile(b.configFile)
+
+	if os.IsNotExist(err) {
+		return nil
+	}
+
+	err = json.Unmarshal(contents, &b.config)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Configure everything required to start building.
-func (b *Builder) configure() {
+func (b *Builder) applyConfig() error {
+	if _, ok := frameworkMap[b.config.Framework]; !ok {
+		return fmt.Errorf("invalid framework: %s", b.config.Framework)
+	}
+
+	if _, ok := styles.Registry[b.config.SyntaxColor]; !ok {
+		return fmt.Errorf("invalid syntax color: %s", b.config.SyntaxColor)
+	}
+
+	b.framework = frameworkMap[b.config.Framework]
+
 	b.markdown = goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,
 			extension.Footnote,
 			mdext.ExternalLinks,
 			mdext.HeadingAnchors,
-			mdext.NewSyntaxHighlighting("algol_nu"),
+			mdext.NewSyntaxHighlighting(b.config.SyntaxColor),
 		),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(),
 		),
 	)
+
+	return nil
 }
 
 // Creates the set of functions used to render page contents.
@@ -399,7 +460,7 @@ func (b *Builder) readPage(page *Page) error {
 	date := page.Data["date"]
 	if date != nil {
 		if s, ok := date.(string); ok {
-			if t, err := time.Parse("2006-1-2", s); err == nil {
+			if t, err := time.Parse(b.config.DateFormat, s); err == nil {
 				page.Date = t
 			}
 		}
