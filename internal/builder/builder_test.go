@@ -310,3 +310,16 @@ export let render = ({ name }) => "<h1>" + name + "</h1>";
 	buildWithoutErrors(t, b)
 	expectInFile(t, b, "index.html", `<h1>dan</h1>`)
 }
+
+func TestLiveReloadScript(t *testing.T) {
+	b := newTestBuilder(t, tfs{
+		"hello.ts": `
+export let render = ({ name }) => "<h1>" + name + "</h1>";
+`,
+		"index.md": `{{ render "./hello" (props "name" "dan") }}`,
+	})
+
+	b.Mode = Development
+	buildWithoutErrors(t, b)
+	expectInFile(t, b, "index.html", `new WebSocket`)
+}
