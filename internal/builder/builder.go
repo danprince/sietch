@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -58,6 +60,8 @@ type Builder struct {
 	config       Config
 	configFile   string
 	pages        []*Page
+	assets       map[string]string
+	assetsMu     sync.Mutex
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
 	framework    Framework
@@ -156,6 +160,8 @@ func New(dir string, mode Mode) *Builder {
 		configFile:   path.Join(dir, ".sietch.json"),
 		config:       defaultConfig,
 		pages:        []*Page{},
+		assets:       map[string]string{},
+		assetsMu:     sync.Mutex{},
 		index:        map[string][]*Page{},
 		framework:    Vanilla,
 	}
@@ -166,6 +172,7 @@ func (b *Builder) Reset() {
 	b.config = defaultConfig
 	b.pages = []*Page{}
 	b.index = map[string][]*Page{}
+	b.assets = map[string]string{}
 }
 
 // Builds the site.
@@ -291,9 +298,26 @@ func (b *Builder) applyConfig() error {
 	return nil
 }
 
+func (b *Builder) addAsset(file string) string {
+	b.assetsMu.Lock()
+	defer b.assetsMu.Unlock()
+
+	if url, ok := b.assets[file]; ok {
+		return url
+	}
+
+	url, _ := filepath.Rel(b.PagesDir, file)
+	b.assets[file] = url
+	return url
+}
+
 // Creates the set of functions used to render page contents.
 func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 	return template.FuncMap{
+		"url": func(src string) string {
+			file := path.Join(b.PagesDir, page.Dir, src)
+			return b.addAsset(file)
+		},
 		"index": func() []*Page {
 			return b.index[page.Dir]
 		},
@@ -725,6 +749,37 @@ func (b *Builder) writeFiles() error {
 			return err
 		}
 		if err := os.WriteFile(page.outputPath, []byte(page.Contents), 0755); err != nil {
+			return err
+		}
+	}
+
+	for src, url := range b.assets {
+		dst := path.Join(b.OutDir, url)
+		dir := path.Dir(dst)
+
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+
+		srcFile, err := os.Open(src)
+
+		if err != nil {
+			return err
+		}
+
+		defer srcFile.Close()
+
+		dstFile, err := os.Create(dst)
+
+		if err != nil {
+			return err
+		}
+
+		defer dstFile.Close()
+
+		_, err = io.Copy(dstFile, srcFile)
+
+		if err != nil {
 			return err
 		}
 	}
