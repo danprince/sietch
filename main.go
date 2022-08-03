@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/danprince/sietch/internal/builder"
 )
@@ -28,7 +30,15 @@ func main() {
 
 	if shouldServe {
 		serve(b)
+		return
+	}
+
+	start := time.Now()
+	err := b.Build()
+	duration := time.Since(start)
+	if err != nil {
+		fmt.Println(err)
 	} else {
-		b.Build()
+		fmt.Printf("built site (%s)\n", duration)
 	}
 }

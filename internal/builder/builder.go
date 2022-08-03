@@ -4,7 +4,6 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/adrg/frontmatter"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/danprince/sietch/internal/errors"
 	"github.com/danprince/sietch/internal/livereload"
 	"github.com/danprince/sietch/internal/mdext"
 	"github.com/evanw/esbuild/pkg/api"
@@ -235,7 +235,7 @@ func (b *Builder) readConfig() error {
 	err = json.Unmarshal(contents, &b.config)
 
 	if err != nil {
-		return err
+		return errors.JsonParseError(err, b.configFile, string(contents))
 	}
 
 	return nil
@@ -244,11 +244,33 @@ func (b *Builder) readConfig() error {
 // Configure everything required to start building.
 func (b *Builder) applyConfig() error {
 	if _, ok := frameworkMap[b.config.Framework]; !ok {
-		return fmt.Errorf("invalid framework: %s", b.config.Framework)
+		allowed := []string{}
+
+		for s := range frameworkMap {
+			allowed = append(allowed, s)
+		}
+
+		return errors.ConfigError{
+			File:    b.configFile,
+			Key:     "Framework",
+			Value:   b.config.Framework,
+			Allowed: allowed,
+		}
 	}
 
 	if _, ok := styles.Registry[b.config.SyntaxColor]; !ok {
-		return fmt.Errorf("invalid syntax color: %s", b.config.SyntaxColor)
+		allowed := []string{}
+
+		for s := range styles.Registry {
+			allowed = append(allowed, s)
+		}
+
+		return errors.ConfigError{
+			File:    b.configFile,
+			Key:     "SyntaxColor",
+			Value:   b.config.SyntaxColor,
+			Allowed: allowed,
+		}
 	}
 
 	b.framework = frameworkMap[b.config.Framework]
@@ -312,9 +334,8 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			return p
 		},
 		"render": func(entryPoint string, props map[string]any) *Island {
-			// Give all islands absolute entrypoints to keep things simpler later
 			if entryPoint[0] == '.' {
-				entryPoint = path.Join(b.PagesDir, page.Dir, entryPoint)
+				entryPoint = "." + path.Join(page.Dir, entryPoint)
 			}
 
 			return page.addIsland(entryPoint, props)
@@ -338,13 +359,13 @@ func (b *Builder) readTemplate() error {
 	if os.IsNotExist(err) {
 		contents = defaultTemplateHtml
 	} else if err != nil {
-		return err
+		return errors.Wrap("template", err)
 	}
 
 	t, err := template.New("template").Funcs(funcs).Parse(string(contents))
 
 	if err != nil {
-		return err
+		return errors.TemplateParseError(err, b.templateFile, string(contents), 0)
 	}
 
 	b.template = t
@@ -430,14 +451,14 @@ func (b *Builder) readPage(page *Page) error {
 	rawContents, err := os.ReadFile(page.inputPath)
 
 	if err != nil {
-		return err
+		return errors.Wrap("builder", err)
 	}
 
 	r := bytes.NewReader(rawContents)
 	contents, err := frontmatter.Parse(r, &page.Data)
 
 	if err != nil {
-		return err
+		return errors.YamlParseError(err, page.inputPath, string(rawContents))
 	}
 
 	// Figure out number of lines of front matter for line numbers in errors
@@ -452,7 +473,7 @@ func (b *Builder) readPage(page *Page) error {
 	funcs := b.templateFuncs(page)
 	tmpl, err := template.New(page.Path).Funcs(funcs).Parse(page.Contents)
 	if err != nil {
-		return err
+		return errors.TemplateParseError(err, b.templateFile, string(contents), page.contentStartLine)
 	}
 	page.template = tmpl
 
@@ -488,23 +509,23 @@ func (b *Builder) buildPage(page *Page) error {
 	globalTemplate, err := b.template.Funcs(funcs).Parse("")
 
 	if err != nil {
-		return err
+		return errors.TemplateParseError(err, page.inputPath, page.Contents, page.contentStartLine)
 	}
 
 	var mdbuf, htmlbuf, pagebuf bytes.Buffer
 
 	if err := page.template.Execute(&mdbuf, page); err != nil {
-		return err
+		return errors.TemplateExecError(err, page.inputPath, page.Contents, page.contentStartLine)
 	}
 
 	if err := b.markdown.Convert(mdbuf.Bytes(), &htmlbuf); err != nil {
-		return err
+		return errors.Wrap("markdown", err)
 	}
 
 	page.Contents = htmlbuf.String()
 
 	if err := globalTemplate.Execute(&pagebuf, page); err != nil {
-		return err
+		return errors.TemplateExecError(err, b.templateFile, "", 0)
 	}
 
 	page.Contents = pagebuf.String()
@@ -530,7 +551,7 @@ func (b *Builder) renderIslands() error {
 	})
 
 	if len(result.Errors) > 0 {
-		return errors.New(result.Errors[0].Text)
+		return errors.EsbuildError(result)
 	}
 
 	var source []byte
@@ -545,14 +566,14 @@ func (b *Builder) renderIslands() error {
 		}
 	}
 
+	name := "server-entry.js"
 	script := fmt.Sprintf("globalThis.$elements = {};\n%s\n$elements", string(source))
 
 	ctx := v8go.NewContext(iso)
-	val, err := ctx.RunScript(script, "server-entry.js")
+	val, err := ctx.RunScript(script, name)
 
 	if err != nil {
-		fmt.Println(source, sourceMap)
-		return err
+		return errors.V8Error(err, name, source, sourceMap, b.AssetsDir)
 	}
 
 	s, err := v8go.JSONStringify(ctx, val)
@@ -628,7 +649,7 @@ func (b *Builder) bundleIslands() error {
 	})
 
 	if len(result.Errors) > 0 {
-		return errors.New(result.Errors[0].Text)
+		return errors.EsbuildError(result)
 	}
 
 	pageIdPattern := regexp.MustCompile(`bundle-(\w+)`)

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/danprince/sietch/internal/builder"
+	"github.com/danprince/sietch/internal/errors"
 	"github.com/danprince/sietch/internal/livereload"
 )
 
@@ -21,7 +23,7 @@ func serve(b *builder.Builder) {
 		if buildErr != nil {
 			w.Header().Add("Content-type", "text/html")
 			w.WriteHeader(500)
-			w.Write([]byte(buildErr.Error()))
+			w.Write([]byte(errors.Html(buildErr)))
 			w.Write([]byte(fmt.Sprintf("<script>%s</script>", livereload.JS)))
 		} else {
 			server.ServeHTTP(w, r)
@@ -32,8 +34,15 @@ func serve(b *builder.Builder) {
 
 	go func() {
 		for {
-			fmt.Println("building site")
+			fmt.Printf("\x1bc") // clear
+			start := time.Now()
 			buildErr = b.Build()
+			duration := time.Since(start)
+			if buildErr != nil {
+				fmt.Println(buildErr)
+			} else {
+				fmt.Printf("built site (%s)\n", duration)
+			}
 			lr.Notify()
 			<-watcher
 			b.Reset()
