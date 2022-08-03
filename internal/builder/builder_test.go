@@ -32,7 +32,7 @@ func newTestBuilder(t *testing.T, fs tfs) *Builder {
 		os.RemoveAll(root)
 	})
 
-	return New(root)
+	return New(root, Production)
 }
 
 // Expect to find a given string inside the contents of a file, relative

@@ -32,12 +32,20 @@ var iso = v8go.NewIsolate()
 //go:embed template.html
 var defaultTemplateHtml []byte
 
+type Mode uint8
+
+const (
+	Development Mode = iota
+	Production
+)
+
 // Manages the state of the site throughout the duration of the process.
 type Builder struct {
 	RootDir      string
 	PagesDir     string
 	AssetsDir    string
 	OutDir       string
+	Mode         Mode
 	template     *template.Template
 	templateFile string
 	pages        []*Page
@@ -116,8 +124,9 @@ func (p *Page) addIsland(entryPoint string, props map[string]any) *Island {
 }
 
 // Creates a new builder with the default settings.
-func New(dir string) *Builder {
+func New(dir string, mode Mode) *Builder {
 	return &Builder{
+		Mode:         mode,
 		RootDir:      dir,
 		PagesDir:     dir,
 		OutDir:       path.Join(dir, "_site"),
@@ -171,8 +180,9 @@ func (b *Builder) Build() error {
 		return err
 	}
 
-	// TODO: Only in serve mode
-	b.injectScripts()
+	if b.Mode == Development {
+		b.injectDevScripts()
+	}
 
 	err = b.writeFiles()
 	if err != nil {
@@ -523,14 +533,17 @@ func (b *Builder) bundleIslands() error {
 	}
 
 	result := api.Build(api.BuildOptions{
-		EntryPoints: entryPoints,
-		Bundle:      true,
-		Write:       true,
-		Outdir:      b.AssetsDir,
-		Platform:    api.PlatformBrowser,
-		Sourcemap:   api.SourceMapLinked,
-		Format:      api.FormatESModule,
-		Splitting:   true,
+		EntryPoints:       entryPoints,
+		Bundle:            true,
+		Write:             true,
+		Outdir:            b.AssetsDir,
+		Platform:          api.PlatformBrowser,
+		Sourcemap:         api.SourceMapLinked,
+		Format:            api.FormatESModule,
+		MinifyWhitespace:  b.Mode == Production,
+		MinifySyntax:      b.Mode == Production,
+		MinifyIdentifiers: b.Mode == Production,
+		Splitting:         true,
 		Plugins: []api.Plugin{
 			browserPagesPlugin(b),
 		},
@@ -595,7 +608,7 @@ func (b *Builder) bundleIslands() error {
 }
 
 // Injects livereload scripts into pages.
-func (b *Builder) injectScripts() {
+func (b *Builder) injectDevScripts() {
 	script := fmt.Sprintf("<script>%s</script>", livereload.JS)
 	for _, page := range b.pages {
 		page.Contents = strings.Replace(page.Contents, "</body>", script+"</body>", 1)
