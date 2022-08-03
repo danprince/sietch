@@ -6,12 +6,16 @@ import (
 	"net/http"
 
 	"github.com/danprince/sietch/internal/builder"
+	"github.com/danprince/sietch/internal/livereload"
 )
 
 func serve(b *builder.Builder) {
 	var buildErr error
 
+	lr := livereload.New()
 	server := http.FileServer(http.Dir(b.OutDir))
+
+	http.Handle("/ws", lr)
 
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if buildErr != nil {
@@ -29,6 +33,7 @@ func serve(b *builder.Builder) {
 		for {
 			fmt.Println("building site")
 			buildErr = b.Build()
+			lr.Notify()
 			<-watcher
 			b.Reset()
 		}

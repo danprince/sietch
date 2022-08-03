@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"github.com/danprince/sietch/internal/livereload"
 	"github.com/danprince/sietch/internal/mdext"
 	"github.com/evanw/esbuild/pkg/api"
 	"github.com/yuin/goldmark"
@@ -169,6 +170,9 @@ func (b *Builder) Build() error {
 	if err != nil {
 		return err
 	}
+
+	// TODO: Only in serve mode
+	b.injectScripts()
 
 	err = b.writeFiles()
 	if err != nil {
@@ -588,6 +592,14 @@ func (b *Builder) bundleIslands() error {
 	}
 
 	return nil
+}
+
+// Injects livereload scripts into pages.
+func (b *Builder) injectScripts() {
+	script := fmt.Sprintf("<script>%s</script>", livereload.JS)
+	for _, page := range b.pages {
+		page.Contents = strings.Replace(page.Contents, "</body>", script+"</body>", 1)
+	}
 }
 
 // Writes all files in the site into the output directory.
