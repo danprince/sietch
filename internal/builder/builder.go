@@ -563,15 +563,19 @@ func (b *Builder) bundleIslands() error {
 		scripts []string
 	}
 
-	bundles := map[string]bundle{}
+	bundles := map[string]*bundle{}
 
 	for _, file := range result.OutputFiles {
-		href := strings.TrimPrefix(file.Path, b.AssetsDir)
+		if !suffix.MatchString(file.Path) {
+			continue
+		}
+
+		href := strings.TrimPrefix(file.Path, b.OutDir)
 		name := path.Base(file.Path)
 		pageId := suffix.ReplaceAllString(name, "")
 
 		if _, ok := bundles[pageId]; !ok {
-			bundles[pageId] = bundle{}
+			bundles[pageId] = &bundle{}
 		}
 
 		if bundle, ok := bundles[pageId]; ok {
