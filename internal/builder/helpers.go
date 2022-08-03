@@ -8,7 +8,7 @@ import (
 func shortHash(s string) string {
 	h := fnv.New32a()
 	h.Write([]byte(s))
-	return fmt.Sprintf("%x", h.Sum32())
+	return fmt.Sprintf("%x", h.Sum32())[:4]
 }
 
 // Implements a less comparator for sorting for any pair of values. These
