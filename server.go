@@ -22,6 +22,7 @@ func serve(b *builder.Builder) {
 			w.Header().Add("Content-type", "text/html")
 			w.WriteHeader(500)
 			w.Write([]byte(buildErr.Error()))
+			w.Write([]byte(fmt.Sprintf("<script>%s</script>", livereload.JS)))
 		} else {
 			server.ServeHTTP(w, r)
 		}
