@@ -521,19 +521,36 @@ func (b *Builder) renderIslands() error {
 // Create client side bundles for the dynamic islands and inject their scripts
 // and styles into pages as necessary.
 func (b *Builder) bundleIslands() error {
-	entryPoints := []string{}
+	entryPoints := []api.EntryPoint{}
 
 	for _, page := range b.pages {
 		for _, island := range page.islands {
 			if island.Type != IslandStatic {
-				entryPoints = append(entryPoints, fmt.Sprintf("%s?browser", page.id))
+				entryPoints = append(entryPoints, api.EntryPoint{
+					InputPath:  fmt.Sprintf("%s?browser", page.id),
+					OutputPath: page.id,
+				})
 				break
 			}
 		}
 	}
 
+	entryNames := "bundle-[name]-[hash]"
+	chunkNames := "chunk-[hash]"
+	assetNames := "media/[name]-[hash]"
+
+	if b.Mode == Development {
+		// Remove hashes in development to prevent ending up with hundreds of
+		// versions of the file in the assets dir.
+		entryNames = "bundle-[name]"
+	}
+
 	result := api.Build(api.BuildOptions{
-		EntryPoints:       entryPoints,
+		EntryPointsAdvanced: entryPoints,
+
+		EntryNames:        entryNames,
+		ChunkNames:        chunkNames,
+		AssetNames:        assetNames,
 		Bundle:            true,
 		Write:             true,
 		Outdir:            b.AssetsDir,
@@ -553,10 +570,7 @@ func (b *Builder) bundleIslands() error {
 		return errors.New(result.Errors[0].Text)
 	}
 
-	// Esbuild turns the ?browser flag we add to our entrypoints into a _browser
-	// suffix, so we can work out which files came from which pages by removing
-	// this suffix to get the page ID.
-	suffix := regexp.MustCompile(`_browser\.(js|css)$`)
+	pageIdPattern := regexp.MustCompile(`bundle-(\w+)`)
 
 	type bundle struct {
 		styles  []string
@@ -566,20 +580,22 @@ func (b *Builder) bundleIslands() error {
 	bundles := map[string]*bundle{}
 
 	for _, file := range result.OutputFiles {
-		if !suffix.MatchString(file.Path) {
+		matches := pageIdPattern.FindStringSubmatch(file.Path)
+
+		if matches == nil {
 			continue
 		}
 
-		href := strings.TrimPrefix(file.Path, b.OutDir)
-		name := path.Base(file.Path)
-		pageId := suffix.ReplaceAllString(name, "")
+		pageId := matches[1]
 
 		if _, ok := bundles[pageId]; !ok {
 			bundles[pageId] = &bundle{}
 		}
 
+		href := strings.TrimPrefix(file.Path, b.OutDir)
+
 		if bundle, ok := bundles[pageId]; ok {
-			switch path.Ext(name) {
+			switch path.Ext(file.Path) {
 			case ".js":
 				bundle.scripts = append(bundle.scripts, href)
 			case ".css":

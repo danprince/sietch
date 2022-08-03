@@ -14,11 +14,21 @@ func main() {
 
 	rootDir, _ := os.Getwd()
 
+	mode := builder.Production
+
 	if shouldServe {
-		b := builder.New(rootDir, builder.Development)
+		mode = builder.Development
+	}
+
+	b := builder.New(rootDir, mode)
+
+	// Start from a fresh slate each time the command is run
+	os.RemoveAll(b.OutDir)
+	os.MkdirAll(b.OutDir, 0755)
+
+	if shouldServe {
 		serve(b)
 	} else {
-		b := builder.New(rootDir, builder.Production)
 		b.Build()
 	}
 }
