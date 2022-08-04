@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Config</title>
+    <style>
+body {
+  font: 1.17rem/1.6 Georgia, 'Times New Roman', serif;
+  padding: 2rem 0 8em 0;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  margin-bottom: 64px;
+  color: #111;
+}
+
+h1, h2, h3, h4, .sans {
+  font-family: 'Helvetica Neue', 'Arial Nova', Helvetica, Arial, sans-serif;
+  margin-bottom: 0;
+}
+
+h2, h3, h4 {
+  margin-top: 2em;
+}
+
+nav {
+  margin-top: 32px;
+  display: flex;
+  gap: 32px;
+}
+
+nav a {
+  text-decoration: none;
+  color: black;
+  font-weight: bold;
+}
+
+nav .active {
+  text-decoration: underline;
+}
+
+pre, code {
+  font-family: Consolas, Menlo, Monaco, monospace;
+  font-size: 0.9em;
+  border-radius: 4px;
+  background-color: ghostwhite;
+  padding: 4px;
+}
+
+pre code {
+  padding: 0;
+  background: none;
+}
+
+pre {
+  padding: 12px;
+  overflow-x: auto;
+}
+
+main > pre {
+  margin-left: -6px;
+}
+
+img, svg {
+  max-width: 100%;
+}
+
+.permalink {
+  color: inherit;
+  text-decoration: none;
+}
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav class="sans">
+        <a href="/" class="">Sietch</a><a href="/get-started.html" class="">Get Started</a><a href="/reference/" class="">Reference</a>
+      </nav>
+
+      <h1>Config</h1>
+
+      <p>Sietch supports a small number of configuration options with a <code>.sietch.json</code> file at the root of your site directory.</p>
+<a href="#dateformat" class="permalink"><h2 id="dateformat"><code>DateFormat</code></h2></a><p>Sietch only understands dates in the format <code>2022-1-20</code> (20th January 2022) by default. Set an alternate format here to use other date formats.</p>
+<p>The value must be a layout that <a href="https://pkg.go.dev/time" target="_blank" rel="noopener noreferrer">Go's <code>time</code> package</a> can parse. That means it must use the reference time of <code>01/02 03:04:05PM '06 -0700</code>.</p>
+<p>Here are <a href="https://pkg.go.dev/time#pkg-constants" target="_blank" rel="noopener noreferrer">some examples</a> of other valid date formats.</p>
+<a href="#syntaxcolor" class="permalink"><h2 id="syntaxcolor"><code>SyntaxColor</code></h2></a><p>Set the syntax highlighting theme to one of the options from <a href="https://xyproto.github.io/splash/docs/all.html" target="_blank" rel="noopener noreferrer">Chroma's styles</a>.</p>
+<p>If you would prefer to style your code with CSS, use <code>&quot;css&quot;</code> as the value here instead.</p>
+<a href="#framework" class="permalink"><h2 id="framework"><code>Framework</code></h2></a><p>The framework to use for islands. Can be one of:</p>
+<ul>
+<li><code>vanilla</code> (plain JS components)</li>
+<li><code>preact</code> (Preact preinstalled in <code>node_modules</code>)</li>
+<li><code>preact-remote</code> (Preact installed from cdn)</li>
+</ul>
+<p>See the <a href="./islands.html">islands reference</a> for details about the frameworks.</p>
+
+    </main>
+  <script>new WebSocket(`ws://${location.host}/ws`).onmessage = () => location.reload()</script></body>
+</html>

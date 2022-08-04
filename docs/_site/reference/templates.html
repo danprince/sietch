@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Templates</title>
+    <style>
+body {
+  font: 1.17rem/1.6 Georgia, 'Times New Roman', serif;
+  padding: 2rem 0 8em 0;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  margin-bottom: 64px;
+  color: #111;
+}
+
+h1, h2, h3, h4, .sans {
+  font-family: 'Helvetica Neue', 'Arial Nova', Helvetica, Arial, sans-serif;
+  margin-bottom: 0;
+}
+
+h2, h3, h4 {
+  margin-top: 2em;
+}
+
+nav {
+  margin-top: 32px;
+  display: flex;
+  gap: 32px;
+}
+
+nav a {
+  text-decoration: none;
+  color: black;
+  font-weight: bold;
+}
+
+nav .active {
+  text-decoration: underline;
+}
+
+pre, code {
+  font-family: Consolas, Menlo, Monaco, monospace;
+  font-size: 0.9em;
+  border-radius: 4px;
+  background-color: ghostwhite;
+  padding: 4px;
+}
+
+pre code {
+  padding: 0;
+  background: none;
+}
+
+pre {
+  padding: 12px;
+  overflow-x: auto;
+}
+
+main > pre {
+  margin-left: -6px;
+}
+
+img, svg {
+  max-width: 100%;
+}
+
+.permalink {
+  color: inherit;
+  text-decoration: none;
+}
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav class="sans">
+        <a href="/" class="">Sietch</a><a href="/get-started.html" class="">Get Started</a><a href="/reference/" class="">Reference</a>
+      </nav>
+
+      <h1>Templates</h1>
+
+      <a href="#custom-template" class="permalink"><h2 id="custom-template">Custom template</h2></a><a href="#variables" class="permalink"><h2 id="variables">Variables</h2></a><a href="#data" class="permalink"><h3 id="data"><code>.Data</code></h3></a><a href="#contents" class="permalink"><h3 id="contents"><code>.Contents</code></h3></a><a href="#url" class="permalink"><h3 id="url"><code>.Url</code></h3></a><a href="#date" class="permalink"><h3 id="date"><code>.Date</code></h3></a><a href="#path" class="permalink"><h3 id="path"><code>.Path</code></h3></a><a href="#dir" class="permalink"><h3 id="dir"><code>.Dir</code></h3></a><a href="#functions" class="permalink"><h2 id="functions">Functions</h2></a><a href="#url-1" class="permalink"><h3 id="url-1"><code>url</code></h3></a><a href="#embed" class="permalink"><h3 id="embed"><code>embed</code></h3></a><a href="#index" class="permalink"><h3 id="index"><code>index</code></h3></a><a href="#orderbydate" class="permalink"><h3 id="orderbydate"><code>orderByDate</code></h3></a><a href="#pageswith" class="permalink"><h3 id="pageswith"><code>pagesWith</code></h3></a><a href="#sortby" class="permalink"><h3 id="sortby"><code>sortBy</code></h3></a><a href="#props" class="permalink"><h3 id="props"><code>props</code></h3></a><a href="#component" class="permalink"><h3 id="component"><code>component</code></h3></a><a href="#hydrate" class="permalink"><h3 id="hydrate"><code>hydrate</code></h3></a><a href="#hydrateonvisible" class="permalink"><h3 id="hydrateonvisible"><code>hydrateOnVisible</code></h3></a><a href="#hydrateonidle" class="permalink"><h3 id="hydrateonidle"><code>hydrateOnIdle</code></h3></a><a href="#clientonly" class="permalink"><h3 id="clientonly"><code>clientOnly</code></h3></a>
+    </main>
+  <script>new WebSocket(`ws://${location.host}/ws`).onmessage = () => location.reload()</script></body>
+</html>

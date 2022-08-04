@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../snippets/counter.ts", "browser-pages:3ba3?browser"],
+  "sourcesContent": ["export let render = ({ count }) => `<button>${count}</button>`;\n\nexport let hydrate = ({ count }, element: HTMLElement) => {\n  let btn = element.querySelector(\"button\")!;\n  btn.onclick = () => btn.textContent = String(++count);\n};\n", "import { onIdle, onVisible } from '@sietch/client';\n\nimport { hydrate as $h3ba3_1 } from './snippets/counter.ts';\n$h3ba3_1({\"count\":0}, document.getElementById('3ba3_1'));\n\n"],
+  "mappings": ";AAEO,IAAI,UAAU,CAAC,EAAE,MAAM,GAAG,YAAyB;AACxD,MAAI,MAAM,QAAQ,cAAc,QAAQ;AACxC,MAAI,UAAU,MAAM,IAAI,cAAc,OAAO,EAAE,KAAK;AACtD;;;ACFA,QAAS,EAAC,SAAQ,EAAC,GAAG,SAAS,eAAe,QAAQ,CAAC;",
+  "names": []
+}
