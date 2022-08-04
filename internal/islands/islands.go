@@ -1,6 +1,7 @@
 package islands
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"path"
