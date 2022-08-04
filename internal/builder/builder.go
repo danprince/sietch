@@ -40,9 +40,9 @@ var (
 	defaultTemplateHtml []byte
 
 	frameworkMap = map[string]islands.Framework{
-		"vanilla":       islands.Vanilla,
-		"preact":        islands.Preact,
-		"preact-remote": islands.PreactRemote,
+		islands.Vanilla.Id:      islands.Vanilla,
+		islands.Preact.Id:       islands.Preact,
+		islands.PreactRemote.Id: islands.PreactRemote,
 	}
 )
 
