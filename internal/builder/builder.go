@@ -236,7 +236,7 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			if err != nil {
 				panic(err)
 			}
-			return string(contents)
+			return strings.TrimSpace(string(contents))
 		},
 		"index": func() []*Page {
 			return b.index[page.Dir]
