@@ -13,7 +13,6 @@ const (
 
 type Island struct {
 	Id         string
-	Marker     string
 	Type       HydrationType
 	Props      map[string]any
 	EntryPoint string
@@ -23,10 +22,14 @@ type Island struct {
 // Helper for templates that turns an island into HTML.
 func (i *Island) String() string {
 	if i.Type == Static {
-		return i.Marker
+		return i.Marker()
 	} else if i.ClientOnly {
 		return fmt.Sprintf(`<div id="%s"></div>`, i.Id)
 	} else {
-		return fmt.Sprintf(`<div id="%s">%s</div>`, i.Id, i.Marker)
+		return fmt.Sprintf(`<div id="%s">%s</div>`, i.Id, i.Marker())
 	}
+}
+
+func (i *Island) Marker() string {
+	return fmt.Sprintf("<!-- %s -->", i.Id)
 }

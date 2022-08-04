@@ -96,11 +96,9 @@ type Page struct {
 // Creates a new island and adds it to the page.
 func (p *Page) addIsland(entryPoint string, props map[string]any) *islands.Island {
 	id := fmt.Sprintf("%s_%d", p.id, len(p.islands))
-	marker := fmt.Sprintf("<!-- %s -->", id)
 
 	island := &islands.Island{
 		Id:         id,
-		Marker:     marker,
 		Props:      props,
 		EntryPoint: entryPoint,
 		Type:       islands.Static,
@@ -567,7 +565,7 @@ func (b *Builder) renderIslands() error {
 	for _, page := range b.pages {
 		for _, island := range page.islands {
 			if html, ok := elements[island.Id]; ok {
-				page.Contents = strings.Replace(page.Contents, island.Marker, html, 1)
+				page.Contents = strings.Replace(page.Contents, island.Marker(), html, 1)
 			}
 		}
 	}
