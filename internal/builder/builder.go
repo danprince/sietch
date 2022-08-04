@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -155,7 +156,12 @@ func (b *Builder) Build() error {
 		return err
 	}
 
-	err = b.walk()
+	err = b.findAssets()
+	if err != nil {
+		return err
+	}
+
+	err = b.findPages()
 	if err != nil {
 		return err
 	}
@@ -334,6 +340,8 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 		},
 		"component": func(entryPoint string, allProps ...islands.Props) *islands.Island {
 			if entryPoint[0] == '.' {
+				// Make the import relative to the pagesDir, so we can use a consistent
+				// resolveDir for all islands when we create the static bundle.
 				entryPoint = "." + path.Join(page.Dir, entryPoint)
 			}
 
@@ -385,18 +393,26 @@ func (b *Builder) readTemplate() error {
 	return nil
 }
 
+// Patterns to ignore whilst we're searching for pages.
+var ignorePatterns = []string{
+	`^\.`,
+	`^_`,
+	`^node_modules$`,
+}
+
 // Recursive walk through the site's pages dir, searching for markdown files
 // and adding them to the builder.
-func (b *Builder) walk() error {
+func (b *Builder) findPages() error {
 	err := filepath.WalkDir(b.PagesDir, func(p string, d fs.DirEntry, err error) error {
 		name := d.Name()
 
-		// Skip over ignored files
-		if name[0] == '_' || name[0] == '.' {
-			if d.IsDir() {
-				return filepath.SkipDir
-			} else {
-				return err
+		for _, re := range ignorePatterns {
+			if ok, _ := regexp.MatchString(re, name); ok {
+				if d.IsDir() {
+					return filepath.SkipDir
+				} else {
+					return err
+				}
 			}
 		}
 
@@ -414,16 +430,22 @@ func (b *Builder) walk() error {
 		return err
 	}
 
+	return err
+}
+
+// Recursively walks the publicDir (if it exists) searching for files and
+// adding them to the builder's asset map.
+func (b *Builder) findAssets() error {
 	info, err := os.Stat(b.PublicDir)
 
 	// If public dir doesn't exist, or is not a directory, there's nothing to search
 	if os.IsNotExist(err) || !info.IsDir() {
 		return nil
 	} else if err != nil {
-		return nil
+		return err
 	}
 
-	err = filepath.WalkDir(b.PublicDir, func(p string, d fs.DirEntry, err error) error {
+	return filepath.WalkDir(b.PublicDir, func(p string, d fs.DirEntry, err error) error {
 		file, _ := filepath.Rel(b.PublicDir, p)
 
 		// We can write to assets without the mutex safely here, because we're not using
@@ -432,8 +454,6 @@ func (b *Builder) walk() error {
 
 		return err
 	})
-
-	return err
 }
 
 // Adds a page to the builder given a path that is relative to the pagesDir.
@@ -515,7 +535,7 @@ func (b *Builder) readPage(page *Page) error {
 	funcs := b.templateFuncs(page)
 	tmpl, err := template.New(page.Path).Funcs(funcs).Parse(page.Contents)
 	if err != nil {
-		return errors.TemplateParseError(err, b.templateFile, string(contents), page.contentStartLine)
+		return errors.TemplateParseError(err, page.inputPath, string(contents), page.contentStartLine)
 	}
 	page.template = tmpl
 
