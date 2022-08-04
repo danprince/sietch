@@ -1,0 +1,6 @@
+json: . expected builder.Config
+
+testdata/fixtures/config_error/.sietch.json:1:2
+  1 []
+      ^
+  2

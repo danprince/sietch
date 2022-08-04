@@ -371,3 +371,13 @@ func Html(e error) string {
 
 	return fmt.Sprintf(`<pre style="%s">%s</pre>`, style.String(), str)
 }
+
+func NoColor(e error) string {
+	s := e.Error()
+
+	for color := range htmlColorCodes {
+		s = strings.ReplaceAll(s, color, "")
+	}
+
+	return s
+}
