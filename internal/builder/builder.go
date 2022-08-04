@@ -43,6 +43,8 @@ var (
 	//go:embed template.html
 	defaultTemplateHtml []byte
 
+	//go:embed client/sietch-client.ts
+	sietchClientSrc string
 	frameworkMap = map[string]Framework{
 		"vanilla": Vanilla,
 	}
@@ -89,10 +91,9 @@ type IslandType uint8
 
 const (
 	IslandStatic IslandType = iota
-	IslandClient
-	IslandClientWhenVisible
-	IslandClientWhenIdle
-	IslandClientOnly
+	IslandClientOnLoad
+	IslandClientOnVisible
+	IslandClientOnIdle
 )
 
 type Island struct {
@@ -101,16 +102,16 @@ type Island struct {
 	Type       IslandType
 	Props      map[string]any
 	EntryPoint string
+	ClientOnly bool
 }
 
 // Helper for templates that turns an island into HTML.
 func (i *Island) String() string {
-	switch i.Type {
-	case IslandStatic:
+	if i.Type == IslandStatic {
 		return i.Marker
-	case IslandClientOnly:
+	} else if i.ClientOnly {
 		return fmt.Sprintf(`<div id="%s"></div>`, i.Id)
-	default:
+	} else {
 		return fmt.Sprintf(`<div id="%s">%s</div>`, i.Id, i.Marker)
 	}
 }
@@ -364,12 +365,20 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 
 			return page.addIsland(entryPoint, props)
 		},
-		"clientOnly": func(island *Island) *Island {
-			island.Type = IslandClientOnly
+		"clientOnLoad": func(island *Island) *Island {
+			island.Type = IslandClientOnLoad
 			return island
 		},
-		"clientEager": func(island *Island) *Island {
-			island.Type = IslandClient
+		"clientOnVisible": func(island *Island) *Island {
+			island.Type = IslandClientOnVisible
+			return island
+		},
+		"clientOnIdle": func(island *Island) *Island {
+			island.Type = IslandClientOnIdle
+			return island
+		},
+		"clientOnly": func(island *Island) *Island {
+			island.ClientOnly = true
 			return island
 		},
 	}
@@ -556,9 +565,19 @@ func (b *Builder) buildPage(page *Page) error {
 	return nil
 }
 
+func (b *Builder) islands() []*Island {
+	islands := []*Island{}
+
+	for _, p := range b.pages {
+		islands = append(islands, p.islands...)
+	}
+
+	return islands
+}
+
 // Render the islands which produce static HTML into their respective pages.
 func (b *Builder) renderIslands() error {
-	code := b.framework.staticEntryPoint(b)
+	code := b.framework.staticEntryPoint(b.islands())
 
 	result := api.Build(api.BuildOptions{
 		Stdin: &api.StdinOptions{
