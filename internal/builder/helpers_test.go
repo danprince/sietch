@@ -4,8 +4,8 @@ import "testing"
 
 func TestShortHash(t *testing.T) {
 	tests := map[string]string{
-		"hello":   "4f9f2cab",
-		"goodbye": "46d72f50",
+		"hello":   "4f9f",
+		"goodbye": "46d7",
 	}
 	for input, expected := range tests {
 		actual := shortHash(input)
