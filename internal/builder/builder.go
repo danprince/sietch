@@ -198,7 +198,7 @@ func (b *Builder) applyConfig() error {
 		goldmark.WithExtensions(
 			extension.GFM,
 			extension.Footnote,
-			mdext.ExternalLinks,
+			mdext.Links,
 			mdext.HeadingAnchors,
 			mdext.NewSyntaxHighlighting(b.config.SyntaxColor),
 		),

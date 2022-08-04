@@ -10,7 +10,7 @@ import (
 )
 
 func TestExternalLinks(t *testing.T) {
-	md := goldmark.New(goldmark.WithExtensions(ExternalLinks))
+	md := goldmark.New(goldmark.WithExtensions(Links))
 
 	tests := map[string]string{
 		// Internal links
