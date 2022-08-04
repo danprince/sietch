@@ -45,8 +45,11 @@ var (
 
 	//go:embed client/sietch-client.ts
 	sietchClientSrc string
+
 	frameworkMap = map[string]Framework{
-		"vanilla": Vanilla,
+		"vanilla":       Vanilla,
+		"preact":        Preact,
+		"preact-remote": PreactRemote,
 	}
 )
 
@@ -83,8 +86,9 @@ var defaultConfig = Config{
 
 // Frameworks decide how to create the entry point files for bundling islands.
 type Framework struct {
-	staticEntryPoint func(b *Builder) string
-	clientEntryPoint func(b *Builder, p *Page) string
+	importMap        map[string]string
+	staticEntryPoint func(islands []*Island) string
+	clientEntryPoint func(islands []*Island) string
 }
 
 type IslandType uint8
@@ -565,11 +569,15 @@ func (b *Builder) buildPage(page *Page) error {
 	return nil
 }
 
-func (b *Builder) islands() []*Island {
+func (b *Builder) staticIslands() []*Island {
 	islands := []*Island{}
 
 	for _, p := range b.pages {
-		islands = append(islands, p.islands...)
+		for _, i := range p.islands {
+			if !i.ClientOnly {
+				islands = append(islands, i)
+			}
+		}
 	}
 
 	return islands
@@ -577,7 +585,7 @@ func (b *Builder) islands() []*Island {
 
 // Render the islands which produce static HTML into their respective pages.
 func (b *Builder) renderIslands() error {
-	code := b.framework.staticEntryPoint(b.islands())
+	code := b.framework.staticEntryPoint(b.staticIslands())
 
 	result := api.Build(api.BuildOptions{
 		Stdin: &api.StdinOptions{
@@ -585,12 +593,18 @@ func (b *Builder) renderIslands() error {
 			Sourcefile: "server-entry.js",
 			ResolveDir: b.PagesDir,
 		},
-		Outdir:    b.AssetsDir,
-		Bundle:    true,
-		Write:     false,
-		Platform:  api.PlatformNeutral,
-		Format:    api.FormatIIFE,
-		Sourcemap: api.SourceMapExternal,
+		Outdir:          b.AssetsDir,
+		Bundle:          true,
+		Write:           false,
+		Platform:        api.PlatformNeutral,
+		Format:          api.FormatIIFE,
+		Sourcemap:       api.SourceMapExternal,
+		JSXMode:         api.JSXModeAutomatic,
+		JSXImportSource: "preact",
+		Plugins: []api.Plugin{
+			importMapPlugin(b.framework.importMap),
+			httpImportsPlugin(),
+		},
 	})
 
 	if len(result.Errors) > 0 {
@@ -678,6 +692,7 @@ func (b *Builder) bundleIslands() error {
 		AssetNames:        assetNames,
 		Bundle:            true,
 		Write:             true,
+		Splitting:         true,
 		Outdir:            b.AssetsDir,
 		Platform:          api.PlatformBrowser,
 		Sourcemap:         api.SourceMapLinked,
@@ -685,9 +700,18 @@ func (b *Builder) bundleIslands() error {
 		MinifyWhitespace:  b.Mode == Production,
 		MinifySyntax:      b.Mode == Production,
 		MinifyIdentifiers: b.Mode == Production,
-		Splitting:         true,
+		JSXMode:           api.JSXModeAutomatic,
+		JSXImportSource:   "preact",
 		Plugins: []api.Plugin{
 			browserPagesPlugin(b),
+			virtualModulesPlugin(map[string]api.OnLoadResult{
+				"@sietch/client": {
+					Contents: &sietchClientSrc,
+					Loader:   api.LoaderTS,
+				},
+			}),
+			importMapPlugin(b.framework.importMap),
+			httpImportsPlugin(),
 		},
 	})
 
