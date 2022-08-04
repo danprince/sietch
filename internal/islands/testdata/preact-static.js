@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { render } from 'preact-render-to-string';
+import { renderToString as render } from 'preact-render-to-string';
 import $ca from './Counter.tsx';
 $elements['a'] = render(h($ca, {"count":1}));
 import $cb from './Counter.tsx';

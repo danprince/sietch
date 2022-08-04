@@ -74,7 +74,7 @@ var Preact = Framework{
 		var b strings.Builder
 
 		b.WriteString("import { h } from 'preact';\n")
-		b.WriteString("import { render } from 'preact-render-to-string';\n")
+		b.WriteString("import { renderToString as render } from 'preact-render-to-string';\n")
 
 		for _, island := range islands {
 			props, _ := json.Marshal(island.Props)
