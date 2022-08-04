@@ -3,7 +3,6 @@ package builder
 import (
 	"bytes"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -17,7 +16,6 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
-	"github.com/alecthomas/chroma/styles"
 	"github.com/danprince/sietch/internal/errors"
 	"github.com/danprince/sietch/internal/islands"
 	"github.com/danprince/sietch/internal/livereload"
@@ -64,18 +62,6 @@ type Builder struct {
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
 	framework    islands.Framework
-}
-
-type Config struct {
-	SyntaxColor string
-	Framework   string
-	DateFormat  string
-}
-
-var defaultConfig = Config{
-	SyntaxColor: "algol_nu",
-	Framework:   "vanilla",
-	DateFormat:  "2006-1-2",
 }
 
 // Page is a markdown file in the site.
@@ -198,54 +184,13 @@ func (b *Builder) Build() error {
 	return nil
 }
 
-// Read and parse the site's global page template.
+// Read and parse the site's config file
 func (b *Builder) readConfig() error {
-	contents, err := os.ReadFile(b.configFile)
-
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	err = json.Unmarshal(contents, &b.config)
-
-	if err != nil {
-		return errors.JsonParseError(err, b.configFile, string(contents))
-	}
-
-	return nil
+	return b.config.load(b.configFile)
 }
 
 // Configure everything required to start building.
 func (b *Builder) applyConfig() error {
-	if _, ok := frameworkMap[b.config.Framework]; !ok {
-		allowed := []string{}
-
-		for s := range frameworkMap {
-			allowed = append(allowed, s)
-		}
-
-		return errors.ConfigError{
-			File:    b.configFile,
-			Key:     "Framework",
-			Value:   b.config.Framework,
-			Allowed: allowed,
-		}
-	}
-
-	if _, ok := styles.Registry[b.config.SyntaxColor]; !ok {
-		allowed := []string{}
-
-		for s := range styles.Registry {
-			allowed = append(allowed, s)
-		}
-
-		return errors.ConfigError{
-			File:    b.configFile,
-			Key:     "SyntaxColor",
-			Value:   b.config.SyntaxColor,
-			Allowed: allowed,
-		}
-	}
 
 	b.framework = frameworkMap[b.config.Framework]
 
