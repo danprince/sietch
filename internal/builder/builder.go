@@ -292,7 +292,7 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 		},
 		"orderByDate": func(pages []*Page) []*Page {
 			sort.SliceStable(pages, func(i, j int) bool {
-				return pages[i].Date.Before(pages[j].Date)
+				return pages[i].Date.After(pages[j].Date)
 			})
 			return pages
 		},
@@ -462,7 +462,11 @@ func (b *Builder) addPage(relPath string) {
 		b.index[parent] = []*Page{}
 	}
 
-	b.index[parent] = append(b.index[parent], page)
+	// The root index.md doesn't ever get indexed
+	if name != "index.md" || dir != "/" {
+		b.index[parent] = append(b.index[parent], page)
+	}
+
 	b.pages = append(b.pages, page)
 }
 
