@@ -1,0 +1,1 @@
+export let render = () => `Hello!`;
