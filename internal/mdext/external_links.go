@@ -1,4 +1,4 @@
-package markdown
+package mdext
 
 import (
 	"strings"
@@ -10,18 +10,20 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
-type links struct {
+type externalLinks struct {
 }
 
-func (e *links) Extend(m goldmark.Markdown) {
+func (e *externalLinks) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(parser.WithASTTransformers(
 		util.Prioritized(e, 200),
 	))
 }
 
-var Links = &links{}
+// Adds the appropriate attributes for opening external links in a new tab
+// and without a referrer/opener.
+var ExternalLinks = &externalLinks{}
 
-func (t *links) Transform(node *ast.Document, reader text.Reader, pc parser.Context) {
+func (t *externalLinks) Transform(node *ast.Document, reader text.Reader, pc parser.Context) {
 	ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering || n.Kind() != ast.KindLink {
 			return ast.WalkContinue, nil

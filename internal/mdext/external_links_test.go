@@ -1,4 +1,4 @@
-package markdown
+package mdext
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestExternalLinks(t *testing.T) {
-	md := goldmark.New(goldmark.WithExtensions(Links))
+	md := goldmark.New(goldmark.WithExtensions(ExternalLinks))
 
 	tests := map[string]string{
 		// Internal links

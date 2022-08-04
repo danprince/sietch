@@ -1,4 +1,4 @@
-package markdown
+package mdext
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestHeadings(t *testing.T) {
-	md := goldmark.New(goldmark.WithExtensions(Headings))
+	md := goldmark.New(goldmark.WithExtensions(HeadingAnchors))
 
 	tests := map[string]string{
 		`# H1`:                     `<a href="#h1" class="permalink"><h1 id="h1">H1</h1></a>`,

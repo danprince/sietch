@@ -1,4 +1,4 @@
-package markdown
+package mdext
 
 import (
 	"fmt"
@@ -10,11 +10,10 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
-// Enables the autoHeadingId at the parser, then wraps each heading inside an anchor.
-type headings struct {
+type headingAnchors struct {
 }
 
-func (h *headings) Extend(m goldmark.Markdown) {
+func (h *headingAnchors) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(
 		parser.WithAutoHeadingID(),
 	)
@@ -23,13 +22,14 @@ func (h *headings) Extend(m goldmark.Markdown) {
 	)
 }
 
-var Headings = &headings{}
+// Wraps each heading in an anchor tag, linking to itself
+var HeadingAnchors = &headingAnchors{}
 
-func (h *headings) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+func (h *headingAnchors) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindHeading, h.renderHeading)
 }
 
-func (h *headings) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (h *headingAnchors) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*ast.Heading)
 	name := fmt.Sprintf("h%d", n.Level)
 

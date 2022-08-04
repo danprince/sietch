@@ -3,9 +3,42 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    {{ if .Data.title }}
+    {{ if .Data.title -}}
       <title>{{ .Data.title }}</title>
-    {{ end }}
+    {{- end }}
+  </head>
+  <body>
+    <main>
+      <nav class="sans">
+        {{ range pagesWith "nav" | sortBy "nav" -}}
+          <a href="{{ .Url }}" class="{{ if eq .Url $.Url -}} active {{- end }}">
+            {{- .Data.title -}}
+          </a>
+        {{- end }}
+      </nav>
+
+      {{ if .Data.title -}}
+        <h1>{{ .Data.title }}</h1>
+      {{- end }}
+
+      {{ if not .Date.IsZero -}}
+        <time class="sans">{{ .Date.Format "Jan 2, 2006" }}</time>
+      {{- end }}
+
+      {{- .Contents -}}
+
+      {{ if (eq .Data.index true) -}}
+        <ul>
+          {{ range index -}}
+            <li>
+              <a href="{{- .Url -}}">
+                {{- .Data.title -}}
+              </a>
+            </li>
+          {{- end }}
+        </ul>
+      {{- end }}
+    </main>
     <style>
 body {
   font: 1.17rem/1.6 Georgia, 'Times New Roman', serif;
@@ -61,7 +94,7 @@ pre {
 }
 
 main > pre {
-  margin-left: -12px;
+  margin-left: -6px;
 }
 
 img, svg {
@@ -73,39 +106,5 @@ img, svg {
   text-decoration: none;
 }
     </style>
-  </head>
-  <body>
-    <main>
-      <nav class="sans">
-        {{ range nav }}
-          <a href="{{ .Url }}" class="{{ if eq .Url $.Url -}} active {{- end }}">
-            {{- .Data.title -}}
-          </a>
-        {{ end }}
-      </nav>
-
-      {{ if .Data.title -}}
-        <h1>{{ .Data.title }}</h1>
-      {{- end }}
-
-      {{ if not .Date.IsZero -}}
-        <time class="sans">{{ .Date.Format "Jan 2, 2006" }}</time>
-      {{- end }}
-
-      {{ .Contents }}
-
-      {{- if (eq .Data.index true) -}}
-        <ul>
-          {{- range index -}}
-            <li>
-              <a href="{{- .Url -}}">
-                {{- .Data.title -}}
-              </a>
-            </li>
-          {{- end -}}
-        </ul>
-      {{- end -}}
-    </main>
   </body>
 </html>
-

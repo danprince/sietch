@@ -4,42 +4,43 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
+	"time"
 
-	"github.com/danprince/sietch/internal/errors"
+	"github.com/danprince/sietch/internal/builder"
 )
 
 func main() {
 	var shouldServe bool
-
 	flag.BoolVar(&shouldServe, "serve", false, "Serve & rebuild the site")
 	flag.Parse()
-	args := flag.Args()
 
 	rootDir, _ := os.Getwd()
-	pagesDir := rootDir
 
-	if len(args) == 1 {
-		pagesDir = path.Join(rootDir, args[0])
-	}
-
-	builder := builderWithDefaults(rootDir)
-	builder.pagesDir = pagesDir
-
-	// Wipe outDir before we build/serve
-	os.RemoveAll(builder.outDir)
+	mode := builder.Production
 
 	if shouldServe {
-		Serve(&builder)
+		mode = builder.Development
+	}
+
+	b := builder.New(rootDir, mode)
+
+	// Start from a fresh slate each time the command is run
+	os.RemoveAll(b.OutDir)
+	os.MkdirAll(b.OutDir, 0755)
+
+	if shouldServe {
+		serve(b)
 		return
 	}
 
-	dt, err := builder.build()
+	start := time.Now()
+	err := b.Build()
+	duration := time.Since(start)
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, errors.FmtError(err))
+		fmt.Println(err)
 		os.Exit(1)
 	} else {
-		fmt.Printf("built %d pages in %s", len(builder.pages), dt)
+		fmt.Printf("built site (%s)\n", duration)
 	}
 }
