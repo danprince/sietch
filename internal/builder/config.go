@@ -48,8 +48,10 @@ func (c *Config) load(file string) error {
 		}
 	}
 
-	if _, ok := styles.Registry[c.SyntaxColor]; !ok {
-		allowed := []string{}
+	// The "css" theme isn't part of chroma, but we use it to enable the
+	// "WithClasses" option internally.
+	if _, ok := styles.Registry[c.SyntaxColor]; !ok && c.SyntaxColor != "css" {
+		allowed := []string{"css"}
 
 		for s := range styles.Registry {
 			allowed = append(allowed, s)

@@ -49,12 +49,19 @@ func (r *syntaxHighlighting) renderFencedCodeBlock(w util.BufWriter, source []by
 		lexer = lexers.Fallback
 	}
 
+	theme := r.style
+
+	if r.style == "css" {
+		theme = "github"
+	}
+
 	lexer = chroma.Coalesce(lexer)
-	style := styles.Get(r.style)
+	style := styles.Get(theme)
 
 	options := []html.Option{
 		html.Standalone(false),
 		html.HighlightLines(highlights),
+		html.WithClasses(r.style == "css"),
 	}
 
 	options = append(options, r.options...)
