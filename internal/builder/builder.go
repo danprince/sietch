@@ -346,15 +346,15 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			return page.addIsland(entryPoint, props)
 		},
 		"hydrate": func(island *islands.Island) *islands.Island {
-			island.Type = islands.ClientOnLoad
+			island.Type = islands.HydrateOnLoad
 			return island
 		},
 		"hydrateOnVisible": func(island *islands.Island) *islands.Island {
-			island.Type = islands.ClientOnVisible
+			island.Type = islands.HydrateOnVisible
 			return island
 		},
 		"hydrateOnIdle": func(island *islands.Island) *islands.Island {
-			island.Type = islands.ClientOnIdle
+			island.Type = islands.HydrateOnIdle
 			return island
 		},
 		"clientOnly": func(island *islands.Island) *islands.Island {

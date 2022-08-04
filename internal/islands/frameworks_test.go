@@ -31,9 +31,9 @@ actual: %s`, index+1, expectLine, actualLine)
 
 func TestFrameworkClients(t *testing.T) {
 	islands := []*Island{
-		{Id: "a", EntryPoint: "./Counter.tsx", Props: Props{"count": 1}, Type: ClientOnLoad},
-		{Id: "b", EntryPoint: "./Counter.tsx", Props: Props{"count": 3}, Type: ClientOnIdle},
-		{Id: "c", EntryPoint: "../Timer.tsx", Props: Props{}, Type: ClientOnVisible},
+		{Id: "a", EntryPoint: "./Counter.tsx", Props: Props{"count": 1}, Type: HydrateOnLoad},
+		{Id: "b", EntryPoint: "./Counter.tsx", Props: Props{"count": 3}, Type: HydrateOnIdle},
+		{Id: "c", EntryPoint: "../Timer.tsx", Props: Props{}, Type: HydrateOnVisible},
 	}
 
 	tests := []Framework{Vanilla, Preact}

@@ -45,18 +45,18 @@ var Vanilla = Framework{
 			props, _ := json.Marshal(island.Props)
 
 			switch island.Type {
-			case ClientOnLoad:
+			case HydrateOnLoad:
 				b.WriteString(fmt.Sprintf("import { hydrate as $h%s } from '%s';\n", id, src))
 				b.WriteString(fmt.Sprintf("$h%s(%s, %s);\n", id, props, elem))
 				b.WriteByte('\n')
 
-			case ClientOnIdle:
+			case HydrateOnIdle:
 				b.WriteString( /*      */ "onIdle()\n")
 				b.WriteString(fmt.Sprintf("  .then(() => import('%s'))\n", src))
 				b.WriteString(fmt.Sprintf("  .then(md => md.hydrate(%s, %s));\n", props, elem))
 				b.WriteByte('\n')
 
-			case ClientOnVisible:
+			case HydrateOnVisible:
 				b.WriteString(fmt.Sprintf("let $e%s = %s;\n", id, elem))
 				b.WriteString(fmt.Sprintf("onVisible($e%s)\n", id))
 				b.WriteString(fmt.Sprintf("  .then(() => import('%s'))\n", src))
@@ -104,18 +104,18 @@ var Preact = Framework{
 			props := island.Props
 
 			switch island.Type {
-			case ClientOnLoad:
+			case HydrateOnLoad:
 				b.WriteString(fmt.Sprintf("import $c%s from '%s';\n", id, src))
 				b.WriteString(fmt.Sprintf("hydrate(h($c%s, %s), %s);\n", id, props, elem))
 				b.WriteByte('\n')
 
-			case ClientOnIdle:
+			case HydrateOnIdle:
 				b.WriteString( /*      */ "onIdle()\n")
 				b.WriteString(fmt.Sprintf("  .then(() => import('%s'))\n", src))
 				b.WriteString(fmt.Sprintf("  .then(md => hydrate(h(md.default, %s), %s));\n", props, elem))
 				b.WriteByte('\n')
 
-			case ClientOnVisible:
+			case HydrateOnVisible:
 				b.WriteString(fmt.Sprintf("let $e%s = %s;\n", id, elem))
 				b.WriteString(fmt.Sprintf("onVisible($e%s)\n", id))
 				b.WriteString(fmt.Sprintf("  .then(() => import('%s'))\n", src))

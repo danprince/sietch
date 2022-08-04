@@ -14,11 +14,11 @@ func TestIslandString(t *testing.T) {
 			output: `<!-- A -->`,
 		},
 		{
-			island: Island{Id: "A", Type: ClientOnIdle, ClientOnly: true},
+			island: Island{Id: "A", Type: HydrateOnIdle, ClientOnly: true},
 			output: `<div id="A"></div>`,
 		},
 		{
-			island: Island{Id: "A", Type: ClientOnIdle},
+			island: Island{Id: "A", Type: HydrateOnIdle},
 			output: `<div id="A"><!-- A --></div>`,
 		},
 	}

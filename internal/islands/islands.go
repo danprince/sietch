@@ -17,9 +17,9 @@ type HydrationType uint8
 
 const (
 	Static HydrationType = iota
-	ClientOnLoad
-	ClientOnVisible
-	ClientOnIdle
+	HydrateOnLoad
+	HydrateOnVisible
+	HydrateOnIdle
 )
 
 type Island struct {
