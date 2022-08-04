@@ -1,1 +1,1 @@
-{{ render "./say-hello.js" (props "name" "world" )}}
+{{ component "./say-hello.js" (props "name" "world" )}}

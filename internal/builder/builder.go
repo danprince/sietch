@@ -332,22 +332,28 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 
 			return p
 		},
-		"render": func(entryPoint string, props map[string]any) *islands.Island {
+		"component": func(entryPoint string, allProps ...islands.Props) *islands.Island {
 			if entryPoint[0] == '.' {
 				entryPoint = "." + path.Join(page.Dir, entryPoint)
 			}
 
+			var props islands.Props
+
+			if len(allProps) > 0 {
+				props = allProps[0]
+			}
+
 			return page.addIsland(entryPoint, props)
 		},
-		"clientOnLoad": func(island *islands.Island) *islands.Island {
+		"hydrate": func(island *islands.Island) *islands.Island {
 			island.Type = islands.ClientOnLoad
 			return island
 		},
-		"clientOnVisible": func(island *islands.Island) *islands.Island {
+		"hydrateOnVisible": func(island *islands.Island) *islands.Island {
 			island.Type = islands.ClientOnVisible
 			return island
 		},
-		"clientOnIdle": func(island *islands.Island) *islands.Island {
+		"hydrateOnIdle": func(island *islands.Island) *islands.Island {
 			island.Type = islands.ClientOnIdle
 			return island
 		},
