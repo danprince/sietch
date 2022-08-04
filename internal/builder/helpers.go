@@ -3,6 +3,9 @@ package builder
 import (
 	"fmt"
 	"hash/fnv"
+	"io"
+	"os"
+	"path"
 )
 
 func shortHash(s string) string {
@@ -30,4 +33,36 @@ func lessAny(a any, b any) bool {
 	// Can support more cases if they come up.
 
 	return false
+}
+
+func copyFile(src string, dst string) error {
+	dir := path.Dir(dst)
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	srcFile, err := os.Open(src)
+
+	if err != nil {
+		return err
+	}
+
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+
+	if err != nil {
+		return err
+	}
+
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

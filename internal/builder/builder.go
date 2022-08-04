@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -52,6 +51,7 @@ type Builder struct {
 	PagesDir     string
 	AssetsDir    string
 	OutDir       string
+	PublicDir    string
 	Mode         Mode
 	template     *template.Template
 	templateFile string
@@ -114,6 +114,7 @@ func New(dir string, mode Mode) *Builder {
 		Mode:         mode,
 		RootDir:      dir,
 		PagesDir:     dir,
+		PublicDir:    path.Join(dir, "public"),
 		OutDir:       path.Join(dir, "_site"),
 		AssetsDir:    path.Join(dir, "_site/_assets"),
 		templateFile: path.Join(dir, "_template.html"),
@@ -381,7 +382,7 @@ func (b *Builder) readTemplate() error {
 // Recursive walk through the site's pages dir, searching for markdown files
 // and adding them to the builder.
 func (b *Builder) walk() error {
-	return filepath.WalkDir(b.PagesDir, func(p string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(b.PagesDir, func(p string, d fs.DirEntry, err error) error {
 		name := d.Name()
 
 		// Skip over ignored files
@@ -402,6 +403,31 @@ func (b *Builder) walk() error {
 
 		return err
 	})
+
+	if err != nil {
+		return err
+	}
+
+	info, err := os.Stat(b.PublicDir)
+
+	// If public dir doesn't exist, or is not a directory, there's nothing to search
+	if os.IsNotExist(err) || !info.IsDir() {
+		return nil
+	} else if err != nil {
+		return nil
+	}
+
+	err = filepath.WalkDir(b.PublicDir, func(p string, d fs.DirEntry, err error) error {
+		file, _ := filepath.Rel(b.PublicDir, p)
+
+		// We can write to assets without the mutex safely here, because we're not using
+		// goroutines for walk (at the moment).
+		b.assets[p] = file
+
+		return err
+	})
+
+	return err
 }
 
 // Adds a page to the builder given a path that is relative to the pagesDir.
@@ -655,33 +681,7 @@ func (b *Builder) writeFiles() error {
 
 	for src, url := range b.assets {
 		dst := path.Join(b.OutDir, url)
-		dir := path.Dir(dst)
-
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return err
-		}
-
-		srcFile, err := os.Open(src)
-
-		if err != nil {
-			return err
-		}
-
-		defer srcFile.Close()
-
-		dstFile, err := os.Create(dst)
-
-		if err != nil {
-			return err
-		}
-
-		defer dstFile.Close()
-
-		_, err = io.Copy(dstFile, srcFile)
-
-		if err != nil {
-			return err
-		}
+		copyFile(src, dst)
 	}
 
 	return nil
