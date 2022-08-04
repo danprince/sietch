@@ -37,6 +37,12 @@ func (t *externalLinks) Transform(node *ast.Document, reader text.Reader, pc par
 			link.SetAttribute([]byte("rel"), []byte("noopener noreferrer"))
 		}
 
+		if strings.HasSuffix(src, ".md") {
+			src = strings.Replace(src, ".md", ".html", 1)
+			src = strings.Replace(src, "index.html", "", 1)
+			link.Destination = []byte(src)
+		}
+
 		return ast.WalkContinue, nil
 	})
 }
