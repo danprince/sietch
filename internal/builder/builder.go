@@ -278,6 +278,14 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			file := path.Join(b.PagesDir, page.Dir, src)
 			return b.addAsset(file)
 		},
+		"embed": func(src string) string {
+			file := path.Join(path.Dir(page.inputPath), src)
+			contents, err := os.ReadFile(file)
+			if err != nil {
+				panic(err)
+			}
+			return string(contents)
+		},
 		"index": func() []*Page {
 			return b.index[page.Dir]
 		},
@@ -305,6 +313,10 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			return pages
 		},
 		"props": func(kvs ...any) islands.Props {
+			if len(kvs)%2 != 0 {
+				panic("unbalanced number of keys/values")
+			}
+
 			p := make(islands.Props, len(kvs)/2)
 
 			for i := 0; i < len(kvs)-1; i++ {
@@ -312,6 +324,8 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 				v := kvs[i+1]
 				if key, ok := k.(string); ok {
 					p[key] = v
+				} else {
+					panic(fmt.Sprintf("key is not a string: %v", k))
 				}
 			}
 
