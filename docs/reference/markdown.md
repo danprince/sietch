@@ -56,6 +56,13 @@ External links automatically get `target="_blank"` and `rel="noreferrer noopener
 [Opens in a new tab](http://danthedev.com)
 ```
 
+## Page Links
+Links to other markdown files are automatically translated to the equivalent HTML.
+
+```md
+[Opens ./islands.html](./islands.md)
+```
+
 ## Code Highlighting
 Fenced code blocks support a [Prism style syntax](https://prismjs.com/plugins/line-highlight/) for line range highlights (e.g. `js/2-4`)
 
