@@ -30,12 +30,10 @@ actual: %s`, index+1, expectLine, actualLine)
 }
 
 func TestFrameworkClients(t *testing.T) {
-	type props map[string]any
-
 	islands := []*Island{
-		{Id: "a", EntryPoint: "./Counter.tsx", Props: props{"count": 1}, Type: ClientOnLoad},
-		{Id: "b", EntryPoint: "./Counter.tsx", Props: props{"count": 3}, Type: ClientOnIdle},
-		{Id: "c", EntryPoint: "../Timer.tsx", Props: props{}, Type: ClientOnVisible},
+		{Id: "a", EntryPoint: "./Counter.tsx", Props: Props{"count": 1}, Type: ClientOnLoad},
+		{Id: "b", EntryPoint: "./Counter.tsx", Props: Props{"count": 3}, Type: ClientOnIdle},
+		{Id: "c", EntryPoint: "../Timer.tsx", Props: Props{}, Type: ClientOnVisible},
 	}
 
 	tests := []Framework{Vanilla, Preact}

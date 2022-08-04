@@ -1,6 +1,9 @@
 package islands
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type HydrationType uint8
 
@@ -14,7 +17,7 @@ const (
 type Island struct {
 	Id         string
 	Type       HydrationType
-	Props      map[string]any
+	Props      Props
 	EntryPoint string
 	ClientOnly bool
 }
@@ -32,4 +35,15 @@ func (i *Island) String() string {
 
 func (i *Island) Marker() string {
 	return fmt.Sprintf("<!-- %s -->", i.Id)
+}
+
+// Distinct type for props that stringifies to JSON.
+type Props map[string]any
+
+func (p Props) String() string {
+	data, err := json.Marshal(p)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }

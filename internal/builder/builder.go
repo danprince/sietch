@@ -94,7 +94,7 @@ type Page struct {
 }
 
 // Creates a new island and adds it to the page.
-func (p *Page) addIsland(entryPoint string, props map[string]any) *islands.Island {
+func (p *Page) addIsland(entryPoint string, props islands.Props) *islands.Island {
 	id := fmt.Sprintf("%s_%d", p.id, len(p.islands))
 
 	island := &islands.Island{
@@ -304,8 +304,8 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			})
 			return pages
 		},
-		"props": func(kvs ...any) map[string]any {
-			p := make(map[string]any, len(kvs)/2)
+		"props": func(kvs ...any) islands.Props {
+			p := make(islands.Props, len(kvs)/2)
 
 			for i := 0; i < len(kvs)-1; i++ {
 				k := kvs[i]

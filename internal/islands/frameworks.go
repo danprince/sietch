@@ -77,7 +77,7 @@ var Preact = Framework{
 		b.WriteString("import { renderToString as render } from 'preact-render-to-string';\n")
 
 		for _, island := range islands {
-			props, _ := json.Marshal(island.Props)
+			props := island.Props
 
 			b.WriteString(fmt.Sprintf(
 				"import $c%s from '%s';\n",
@@ -101,7 +101,7 @@ var Preact = Framework{
 			id := island.Id
 			src := island.EntryPoint
 			elem := fmt.Sprintf(`document.getElementById('%s')`, island.Id)
-			props, _ := json.Marshal(island.Props)
+			props := island.Props
 
 			switch island.Type {
 			case ClientOnLoad:
