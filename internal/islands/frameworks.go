@@ -1,10 +1,17 @@
-package builder
+package islands
 
 import (
 	"encoding/json"
 	"fmt"
 	"strings"
 )
+
+// Frameworks decide how to create the entry point files for bundling islands.
+type Framework struct {
+	importMap        map[string]string
+	staticEntryPoint func(islands []*Island) string
+	clientEntryPoint func(islands []*Island) string
+}
 
 var Vanilla = Framework{
 	staticEntryPoint: func(islands []*Island) string {
@@ -25,18 +32,18 @@ var Vanilla = Framework{
 			props, _ := json.Marshal(island.Props)
 
 			switch island.Type {
-			case IslandClientOnLoad:
+			case ClientOnLoad:
 				b.WriteString(fmt.Sprintf(`
 import { hydrate as $h%s } from '%s';
 $h%s(%s, %s);
 `, island.Id, island.EntryPoint, island.Id, props, elem))
 
-			case IslandClientOnIdle:
+			case ClientOnIdle:
 				b.WriteString(fmt.Sprintf(`
 onIdle().then(() => import('%s')).then(mod => mod.hydrate(%s, %s))
 `, island.EntryPoint, props, elem))
 
-			case IslandClientOnVisible:
+			case ClientOnVisible:
 				b.WriteString(fmt.Sprintf(`
 onVisible(%s).then(() => import('%s')).then(mod => mod.hydrate(%s, %s))
 `, elem, island.EntryPoint, props, elem))
@@ -72,18 +79,18 @@ import { hydrate, h } from "preact";
 			props, _ := json.Marshal(island.Props)
 
 			switch island.Type {
-			case IslandClientOnLoad:
+			case ClientOnLoad:
 				b.WriteString(fmt.Sprintf(`
 import { default as C%s } from '%s';
 hydrate(h(C%s, %s), %s);
 `, island.Id, island.EntryPoint, island.Id, props, elem))
 
-			case IslandClientOnIdle:
+			case ClientOnIdle:
 				b.WriteString(fmt.Sprintf(`
 onIdle().then(() => import('%s')).then(mod => hydrate(h(mod.default, %s), %s));
 `, island.EntryPoint, props, elem))
 
-			case IslandClientOnVisible:
+			case ClientOnVisible:
 				b.WriteString(fmt.Sprintf(`
 onVisible(%s).then(() => import('%s')).then(mod => hydrate(h(mod.default, %s), %s));
 `, elem, island.EntryPoint, props, elem))

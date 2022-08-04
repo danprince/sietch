@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -20,14 +19,13 @@ import (
 	"github.com/adrg/frontmatter"
 	"github.com/alecthomas/chroma/styles"
 	"github.com/danprince/sietch/internal/errors"
+	"github.com/danprince/sietch/internal/islands"
 	"github.com/danprince/sietch/internal/livereload"
 	"github.com/danprince/sietch/internal/mdext"
-	"github.com/evanw/esbuild/pkg/api"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/sync/errgroup"
-	"rogchap.com/v8go"
 )
 
 type Mode uint8
@@ -38,18 +36,13 @@ const (
 )
 
 var (
-	iso = v8go.NewIsolate()
-
 	//go:embed template.html
 	defaultTemplateHtml []byte
 
-	//go:embed client/sietch-client.ts
-	sietchClientSrc string
-
-	frameworkMap = map[string]Framework{
-		"vanilla":       Vanilla,
-		"preact":        Preact,
-		"preact-remote": PreactRemote,
+	frameworkMap = map[string]islands.Framework{
+		"vanilla":       islands.Vanilla,
+		"preact":        islands.Preact,
+		"preact-remote": islands.PreactRemote,
 	}
 )
 
@@ -69,7 +62,7 @@ type Builder struct {
 	assetsMu     sync.Mutex
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
-	framework    Framework
+	framework    islands.Framework
 }
 
 type Config struct {
@@ -82,42 +75,6 @@ var defaultConfig = Config{
 	SyntaxColor: "algol_nu",
 	Framework:   "vanilla",
 	DateFormat:  "2006-1-2",
-}
-
-// Frameworks decide how to create the entry point files for bundling islands.
-type Framework struct {
-	importMap        map[string]string
-	staticEntryPoint func(islands []*Island) string
-	clientEntryPoint func(islands []*Island) string
-}
-
-type IslandType uint8
-
-const (
-	IslandStatic IslandType = iota
-	IslandClientOnLoad
-	IslandClientOnVisible
-	IslandClientOnIdle
-)
-
-type Island struct {
-	Id         string
-	Marker     string
-	Type       IslandType
-	Props      map[string]any
-	EntryPoint string
-	ClientOnly bool
-}
-
-// Helper for templates that turns an island into HTML.
-func (i *Island) String() string {
-	if i.Type == IslandStatic {
-		return i.Marker
-	} else if i.ClientOnly {
-		return fmt.Sprintf(`<div id="%s"></div>`, i.Id)
-	} else {
-		return fmt.Sprintf(`<div id="%s">%s</div>`, i.Id, i.Marker)
-	}
 }
 
 // Page is a markdown file in the site.
@@ -133,20 +90,20 @@ type Page struct {
 	inputPath        string
 	outputPath       string
 	contentStartLine int
-	islands          []*Island
+	islands          []*islands.Island
 }
 
 // Creates a new island and adds it to the page.
-func (p *Page) addIsland(entryPoint string, props map[string]any) *Island {
+func (p *Page) addIsland(entryPoint string, props map[string]any) *islands.Island {
 	id := fmt.Sprintf("%s_%d", p.id, len(p.islands))
 	marker := fmt.Sprintf("<!-- %s -->", id)
 
-	island := &Island{
+	island := &islands.Island{
 		Id:         id,
 		Marker:     marker,
 		Props:      props,
 		EntryPoint: entryPoint,
-		Type:       IslandStatic,
+		Type:       islands.Static,
 	}
 
 	p.islands = append(p.islands, island)
@@ -168,7 +125,7 @@ func New(dir string, mode Mode) *Builder {
 		assets:       map[string]string{},
 		assetsMu:     sync.Mutex{},
 		index:        map[string][]*Page{},
-		framework:    Vanilla,
+		framework:    islands.Vanilla,
 	}
 }
 
@@ -362,26 +319,26 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 
 			return p
 		},
-		"render": func(entryPoint string, props map[string]any) *Island {
+		"render": func(entryPoint string, props map[string]any) *islands.Island {
 			if entryPoint[0] == '.' {
 				entryPoint = "." + path.Join(page.Dir, entryPoint)
 			}
 
 			return page.addIsland(entryPoint, props)
 		},
-		"clientOnLoad": func(island *Island) *Island {
-			island.Type = IslandClientOnLoad
+		"clientOnLoad": func(island *islands.Island) *islands.Island {
+			island.Type = islands.ClientOnLoad
 			return island
 		},
-		"clientOnVisible": func(island *Island) *Island {
-			island.Type = IslandClientOnVisible
+		"clientOnVisible": func(island *islands.Island) *islands.Island {
+			island.Type = islands.ClientOnVisible
 			return island
 		},
-		"clientOnIdle": func(island *Island) *Island {
-			island.Type = IslandClientOnIdle
+		"clientOnIdle": func(island *islands.Island) *islands.Island {
+			island.Type = islands.ClientOnIdle
 			return island
 		},
-		"clientOnly": func(island *Island) *Island {
+		"clientOnly": func(island *islands.Island) *islands.Island {
 			island.ClientOnly = true
 			return island
 		},
@@ -569,78 +526,39 @@ func (b *Builder) buildPage(page *Page) error {
 	return nil
 }
 
-func (b *Builder) staticIslands() []*Island {
-	islands := []*Island{}
+func (b *Builder) staticIslands() []*islands.Island {
+	staticIslands := []*islands.Island{}
 
 	for _, p := range b.pages {
 		for _, i := range p.islands {
 			if !i.ClientOnly {
-				islands = append(islands, i)
+				staticIslands = append(staticIslands, i)
 			}
 		}
 	}
 
-	return islands
+	return staticIslands
 }
 
-// Render the islands which produce static HTML into their respective pages.
-func (b *Builder) renderIslands() error {
-	code := b.framework.staticEntryPoint(b.staticIslands())
+func (p *Page) clientIslands() []*islands.Island {
+	clientIslands := []*islands.Island{}
 
-	result := api.Build(api.BuildOptions{
-		Stdin: &api.StdinOptions{
-			Contents:   code,
-			Sourcefile: "server-entry.js",
-			ResolveDir: b.PagesDir,
-		},
-		Outdir:          b.AssetsDir,
-		Bundle:          true,
-		Write:           false,
-		Platform:        api.PlatformNeutral,
-		Format:          api.FormatIIFE,
-		Sourcemap:       api.SourceMapExternal,
-		JSXMode:         api.JSXModeAutomatic,
-		JSXImportSource: "preact",
-		Plugins: []api.Plugin{
-			importMapPlugin(b.framework.importMap),
-			httpImportsPlugin(),
-		},
-	})
-
-	if len(result.Errors) > 0 {
-		return errors.EsbuildError(result)
-	}
-
-	var source []byte
-	var sourceMap []byte
-
-	for _, file := range result.OutputFiles {
-		switch path.Base(file.Path) {
-		case "stdin.js":
-			source = file.Contents
-		case "stdin.js.map":
-			sourceMap = file.Contents
+	for _, i := range p.islands {
+		if i.Type != islands.Static {
+			clientIslands = append(clientIslands, i)
 		}
 	}
 
-	name := "server-entry.js"
-	script := fmt.Sprintf("globalThis.$elements = {};\n%s\n$elements", string(source))
+	return clientIslands
+}
 
-	ctx := v8go.NewContext(iso)
-	val, err := ctx.RunScript(script, name)
-
-	if err != nil {
-		return errors.V8Error(err, name, source, sourceMap, b.AssetsDir)
-	}
-
-	s, err := v8go.JSONStringify(ctx, val)
-
-	if err != nil {
-		return err
-	}
-
-	elements := map[string]string{}
-	err = json.Unmarshal([]byte(s), &elements)
+func (b *Builder) renderIslands() error {
+	elements, err := islands.Render(islands.RenderOptions{
+		Islands:    b.staticIslands(),
+		AssetsDir:  b.AssetsDir,
+		ResolveDir: b.PagesDir,
+		Framework:  b.framework,
+	})
 
 	if err != nil {
 		return err
@@ -657,100 +575,27 @@ func (b *Builder) renderIslands() error {
 	return nil
 }
 
-// Create client side bundles for the dynamic islands and inject their scripts
-// and styles into pages as necessary.
 func (b *Builder) bundleIslands() error {
-	entryPoints := []api.EntryPoint{}
+	islandsByPage := map[string][]*islands.Island{}
 
-	for _, page := range b.pages {
-		for _, island := range page.islands {
-			if island.Type != IslandStatic {
-				entryPoints = append(entryPoints, api.EntryPoint{
-					InputPath:  fmt.Sprintf("%s?browser", page.id),
-					OutputPath: page.id,
-				})
-				break
-			}
+	for _, p := range b.pages {
+		clientIslands := p.clientIslands()
+		if len(clientIslands) > 0 {
+			islandsByPage[p.id] = p.clientIslands()
 		}
 	}
 
-	entryNames := "bundle-[name]-[hash]"
-	chunkNames := "chunk-[hash]"
-	assetNames := "media/[name]-[hash]"
-
-	if b.Mode == Development {
-		// Remove hashes in development to prevent ending up with hundreds of
-		// versions of the file in the assets dir.
-		entryNames = "bundle-[name]"
-	}
-
-	result := api.Build(api.BuildOptions{
-		EntryPointsAdvanced: entryPoints,
-
-		EntryNames:        entryNames,
-		ChunkNames:        chunkNames,
-		AssetNames:        assetNames,
-		Bundle:            true,
-		Write:             true,
-		Splitting:         true,
-		Outdir:            b.AssetsDir,
-		Platform:          api.PlatformBrowser,
-		Sourcemap:         api.SourceMapLinked,
-		Format:            api.FormatESModule,
-		MinifyWhitespace:  b.Mode == Production,
-		MinifySyntax:      b.Mode == Production,
-		MinifyIdentifiers: b.Mode == Production,
-		JSXMode:           api.JSXModeAutomatic,
-		JSXImportSource:   "preact",
-		Plugins: []api.Plugin{
-			browserPagesPlugin(b),
-			virtualModulesPlugin(map[string]api.OnLoadResult{
-				"@sietch/client": {
-					Contents: &sietchClientSrc,
-					Loader:   api.LoaderTS,
-				},
-			}),
-			importMapPlugin(b.framework.importMap),
-			httpImportsPlugin(),
-		},
+	bundles, err := islands.Bundle(islands.BundleOptions{
+		Framework:     b.framework,
+		IslandsByPage: islandsByPage,
+		Production:    b.Mode == Production,
+		OutDir:        b.OutDir,
+		AssetsDir:     b.AssetsDir,
+		ResolveDir:    b.PagesDir,
 	})
 
-	if len(result.Errors) > 0 {
-		return errors.EsbuildError(result)
-	}
-
-	pageIdPattern := regexp.MustCompile(`bundle-(\w+)`)
-
-	type bundle struct {
-		styles  []string
-		scripts []string
-	}
-
-	bundles := map[string]*bundle{}
-
-	for _, file := range result.OutputFiles {
-		matches := pageIdPattern.FindStringSubmatch(file.Path)
-
-		if matches == nil {
-			continue
-		}
-
-		pageId := matches[1]
-
-		if _, ok := bundles[pageId]; !ok {
-			bundles[pageId] = &bundle{}
-		}
-
-		href := strings.TrimPrefix(file.Path, b.OutDir)
-
-		if bundle, ok := bundles[pageId]; ok {
-			switch path.Ext(file.Path) {
-			case ".js":
-				bundle.scripts = append(bundle.scripts, href)
-			case ".css":
-				bundle.styles = append(bundle.styles, href)
-			}
-		}
+	if err != nil {
+		return err
 	}
 
 	for _, page := range b.pages {
@@ -758,12 +603,12 @@ func (b *Builder) bundleIslands() error {
 			var scriptTags strings.Builder
 			var linkTags strings.Builder
 
-			for _, src := range bundle.scripts {
+			for _, src := range bundle.Scripts {
 				scriptTags.WriteString(fmt.Sprintf(`<script type="module" src="%s"></script>`, src))
 				scriptTags.WriteByte('\n')
 			}
 
-			for _, href := range bundle.styles {
+			for _, href := range bundle.Styles {
 				linkTags.WriteString(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, href))
 				linkTags.WriteByte('\n')
 			}

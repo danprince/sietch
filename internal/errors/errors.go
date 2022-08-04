@@ -144,6 +144,10 @@ func EsbuildError(result api.BuildResult) error {
 		details.WriteByte('\n')
 	}
 
+	if err.Location == nil {
+		return Wrap("esbuild", fmt.Errorf(err.Text))
+	}
+
 	virtual := false
 	lineOffset := err.Location.Line - 1
 	contents := err.Location.LineText

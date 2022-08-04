@@ -1,4 +1,4 @@
-package builder
+package islands
 
 import (
 	"fmt"
@@ -14,15 +14,9 @@ import (
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-func browserPagesPlugin(b *Builder) api.Plugin {
+func browserPagesPlugin(opts BundleOptions) api.Plugin {
 	namespace := "browser-pages"
 	filter := `\?browser`
-
-	pagesById := map[string]*Page{}
-
-	for _, p := range b.pages {
-		pagesById[p.id] = p
-	}
 
 	return api.Plugin{
 		Name: "browser-pages-plugin",
@@ -41,12 +35,12 @@ func browserPagesPlugin(b *Builder) api.Plugin {
 				Namespace: namespace,
 			}, func(args api.OnLoadArgs) (api.OnLoadResult, error) {
 				pageId := strings.ReplaceAll(args.Path, "?browser", "")
-				page := pagesById[pageId]
-				contents := b.framework.clientEntryPoint(page.islands)
+				islands := opts.IslandsByPage[pageId]
+				contents := opts.Framework.clientEntryPoint(islands)
 				return api.OnLoadResult{
 					Contents:   &contents,
 					Loader:     api.LoaderJS,
-					ResolveDir: b.PagesDir,
+					ResolveDir: opts.ResolveDir,
 				}, nil
 			})
 		},
