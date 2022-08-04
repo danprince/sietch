@@ -278,6 +278,14 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			file := path.Join(b.PagesDir, page.Dir, src)
 			return b.addAsset(file)
 		},
+		"embed": func(src string) string {
+			file := path.Join(path.Dir(page.inputPath), src)
+			contents, err := os.ReadFile(file)
+			if err != nil {
+				panic(err)
+			}
+			return string(contents)
+		},
 		"index": func() []*Page {
 			return b.index[page.Dir]
 		},
