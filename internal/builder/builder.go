@@ -256,6 +256,18 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 			}
 			return strings.TrimSpace(string(contents))
 		},
+		"page": func(src string) *Page {
+			file := regexp.MustCompile(`/$`).ReplaceAllString(src, "/index.md")
+			file = path.Join(path.Dir(page.inputPath), file)
+
+			for _, p := range b.pages {
+				if p.inputPath == file {
+					return p
+				}
+			}
+
+			return nil
+		},
 		"index": func() []*Page {
 			return b.index[page.Dir]
 		},
