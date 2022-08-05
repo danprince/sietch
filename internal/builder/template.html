@@ -96,7 +96,7 @@ img, svg {
 
       {{ if (eq .Data.index true) -}}
         <ul>
-          {{ range index -}}
+          {{ range index | orderByDate "desc" -}}
             <li>
               <a href="{{- .Url -}}">
                 {{- .Data.title -}}

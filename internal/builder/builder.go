@@ -259,9 +259,17 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 		"index": func() []*Page {
 			return b.index[page.Dir]
 		},
-		"orderByDate": func(pages []*Page) []*Page {
+		"orderByDate": func(order string, pages []*Page) []*Page {
+			if order != "asc" && order != "desc" {
+				panic(fmt.Sprintf(`order must be "asc" or "desc", got "%s"`, order))
+			}
+			asc := order == "asc"
 			sort.SliceStable(pages, func(i, j int) bool {
-				return pages[i].Date.After(pages[j].Date)
+				if asc {
+					return pages[i].Date.Before(pages[j].Date)
+				} else {
+					return pages[i].Date.After(pages[j].Date)
+				}
 			})
 			return pages
 		},
