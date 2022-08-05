@@ -18,13 +18,13 @@ func TestParseHighlightRanges(t *testing.T) {
 		"js":               {"js", lines{}},
 		"js/":              {"js", lines{}},
 		"js/0-1":           {"js", lines{}},
-		"js/5-4":           {"js", lines{{4, 4}}},
-		"js/5 - ":          {"js", lines{{4, 4}}},
-		"js/5":             {"js", lines{{4, 4}}},
-		"py/1-5":           {"py", lines{{0, 4}}},
-		"rs/1,4":           {"rs", lines{{0, 0}, {3, 3}}},
-		"tsx/1-2, 5, 9-20": {"tsx", lines{{0, 1}, {4, 4}, {8, 19}}},
-		"tsx/1-2-3":        {"tsx", lines{{0, 1}}},
+		"js/5-4":           {"js", lines{{5, 5}}},
+		"js/5 - ":          {"js", lines{{5, 5}}},
+		"js/5":             {"js", lines{{5, 5}}},
+		"py/1-5":           {"py", lines{{1, 5}}},
+		"rs/1,4":           {"rs", lines{{1, 1}, {4, 4}}},
+		"tsx/1-2, 5, 9-20": {"tsx", lines{{1, 2}, {5, 5}, {9, 20}}},
+		"tsx/1-2-3":        {"tsx", lines{{1, 2}}},
 	}
 
 	for input, expected := range tests {
