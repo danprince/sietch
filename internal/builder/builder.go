@@ -209,6 +209,12 @@ func (b *Builder) readConfig() error {
 
 // Configure everything required to start building.
 func (b *Builder) applyConfig() error {
+	b.PagesDir = path.Join(b.RootDir, b.config.PagesDir)
+
+	// Should this be done as part of reading the config instead?
+	if info, err := os.Stat(b.PagesDir); err != nil || !info.IsDir() {
+		return errors.Wrap("config", err)
+	}
 
 	b.framework = frameworkMap[b.config.Framework]
 

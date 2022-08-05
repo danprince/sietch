@@ -337,8 +337,16 @@ func (e ConfigError) Error() string {
 	sort.Strings(e.Allowed)
 	sb := strings.Builder{}
 	sb.WriteString(fmt.Sprintf("%sconfig error: %s%s\n", errorColor, file, resetColor))
-	sb.WriteString(fmt.Sprintf("Invalid value for %s: %s%v%s\n", e.Key, errorColor, e.Value, resetColor))
-	sb.WriteString(fmt.Sprintf("Expected one of: %s%s%s", errorFocusColor, strings.Join(e.Allowed, ", "), resetColor))
+	sb.WriteString(fmt.Sprintf("Invalid value for %s%s%s: %s%v%s\n", errorFocusColor, e.Key, resetColor, errorColor, e.Value, resetColor))
+
+	if len(e.Allowed) > 0 {
+		sb.WriteString(fmt.Sprintf("Expected one of: %s%s%s", errorFocusColor, strings.Join(e.Allowed, ", "), resetColor))
+	}
+
+	if len(e.Message) > 0 {
+		sb.WriteString(e.Message)
+	}
+
 	return sb.String()
 }
 
