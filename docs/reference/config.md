@@ -4,6 +4,11 @@ title: Config
 
 Sietch supports a small number of configuration options with a `.sietch.json` file at the root of your site directory.
 
+## `PagesDir`
+This is the directory where Sietch will search for markdown files to turn into pages. By default it is the root of the site directory, but you use any relative directory.
+
+For example, if you set `PagesDir` to `"./posts"` then only pages in the `posts` directory will be built. This doesn't affect where Sietch looks for config files, templates, or public files.
+
 ## `DateFormat`
 Sietch only understands dates in the format `2022-1-20` (20th January 2022) by default. Set an alternate format here to use other date formats.
 
