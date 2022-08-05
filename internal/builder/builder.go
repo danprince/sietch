@@ -65,7 +65,8 @@ type Builder struct {
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
 	framework    islands.Framework
-	minify       *minify.M
+	minifier     *minify.M
+	minify       bool
 }
 
 // Page is a markdown file in the site.
@@ -120,7 +121,8 @@ func New(dir string, mode Mode) *Builder {
 		assetsMu:     sync.Mutex{},
 		index:        map[string][]*Page{},
 		framework:    islands.Vanilla,
-		minify:       min,
+		minifier:     min,
+		minify:       mode == Production,
 	}
 }
 
@@ -185,7 +187,7 @@ func (b *Builder) Build() error {
 		b.injectDevScripts()
 	}
 
-	if b.Mode == Production {
+	if b.minify {
 		err := b.minifyPages()
 		if err != nil {
 			return err
@@ -675,7 +677,7 @@ func (b *Builder) minifyPages() error {
 // Minifies the contents of a single page.
 func (b *Builder) minifyPage(p *Page) error {
 	for _, p := range b.pages {
-		html, err := b.minify.String("text/html", p.Contents)
+		html, err := b.minifier.String("text/html", p.Contents)
 		if err != nil {
 			return err
 		}
