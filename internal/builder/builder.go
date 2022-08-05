@@ -310,6 +310,8 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 
 			if len(allProps) > 0 {
 				props = allProps[0]
+			} else {
+				props = islands.Props{}
 			}
 
 			return page.addIsland(entryPoint, props)
