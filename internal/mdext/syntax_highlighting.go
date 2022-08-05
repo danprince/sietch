@@ -120,7 +120,11 @@ func parseHighlightRanges(s string) (string, []lineRange) {
 			end = start
 		}
 
-		if start > 0 {
+		// Chroma wants zero based indexes
+		start -= 1
+		end -= 1
+
+		if start >= 0 {
 			ranges = append(ranges, lineRange{start, end})
 		}
 	}
