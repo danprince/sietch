@@ -553,7 +553,8 @@ func (b *Builder) buildPages() error {
 // template file.
 func (b *Builder) buildPage(page *Page) error {
 	funcs := b.templateFuncs(page)
-	globalTemplate, err := b.template.Funcs(funcs).Parse("")
+	globalTemplate, err := b.template.Clone()
+	globalTemplate.Funcs(funcs).Parse("")
 
 	if err != nil {
 		return errors.TemplateParseError(err, page.inputPath, page.Contents, page.contentStartLine)
