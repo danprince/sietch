@@ -20,6 +20,9 @@ import (
 	"github.com/danprince/sietch/internal/islands"
 	"github.com/danprince/sietch/internal/livereload"
 	"github.com/danprince/sietch/internal/mdext"
+	"github.com/tdewolff/minify/v2"
+	mincss "github.com/tdewolff/minify/v2/css"
+	minhtml "github.com/tdewolff/minify/v2/html"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
@@ -62,6 +65,7 @@ type Builder struct {
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
 	framework    islands.Framework
+	minify       *minify.M
 }
 
 // Page is a markdown file in the site.
@@ -97,6 +101,10 @@ func (p *Page) addIsland(entryPoint string, props islands.Props) *islands.Island
 
 // Creates a new builder with the default settings.
 func New(dir string, mode Mode) *Builder {
+	min := minify.New()
+	min.AddFunc("text/html", minhtml.Minify)
+	min.AddFunc("text/css", mincss.Minify)
+
 	return &Builder{
 		Mode:         mode,
 		RootDir:      dir,
@@ -112,6 +120,7 @@ func New(dir string, mode Mode) *Builder {
 		assetsMu:     sync.Mutex{},
 		index:        map[string][]*Page{},
 		framework:    islands.Vanilla,
+		minify:       min,
 	}
 }
 
@@ -174,6 +183,13 @@ func (b *Builder) Build() error {
 
 	if b.Mode == Development {
 		b.injectDevScripts()
+	}
+
+	if b.Mode == Production {
+		err := b.minifyPages()
+		if err != nil {
+			return err
+		}
 	}
 
 	err = b.writeFiles()
@@ -640,6 +656,30 @@ func (b *Builder) injectDevScripts() {
 	for _, page := range b.pages {
 		page.Contents = strings.Replace(page.Contents, "</body>", script+"</body>", 1)
 	}
+}
+
+// Minifies the contents of all pages concurrently
+func (b *Builder) minifyPages() error {
+	var g errgroup.Group
+	for _, page := range b.pages {
+		p := page
+		g.Go(func() error {
+			return b.minifyPage(p)
+		})
+	}
+	return g.Wait()
+}
+
+// Minifies the contents of a single page.
+func (b *Builder) minifyPage(p *Page) error {
+	for _, p := range b.pages {
+		html, err := b.minify.String("text/html", p.Contents)
+		if err != nil {
+			return err
+		}
+		p.Contents = html
+	}
+	return nil
 }
 
 // Writes all files in the site into the output directory.
