@@ -32,15 +32,20 @@ func (h *headingAnchors) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) 
 func (h *headingAnchors) renderHeading(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*ast.Heading)
 	name := fmt.Sprintf("h%d", n.Level)
+	id, _ := node.Attribute([]byte("id"))
+	autolink := n.FirstChild().Kind() != ast.KindLink
 
-	if entering {
-		id, _ := node.Attribute([]byte("id"))
+	if autolink && entering {
 		w.WriteString(fmt.Sprintf(`<a href="#%s" class="permalink">`, id))
 		w.WriteString(fmt.Sprintf(`<%s id="%s">`, name, id))
-		return ast.WalkContinue, nil
-	} else {
+	} else if autolink {
 		w.WriteString(fmt.Sprintf("</%s>", name))
 		w.WriteString("</a>")
-		return ast.WalkContinue, nil
+	} else if entering {
+		w.WriteString(fmt.Sprintf(`<%s>`, name))
+	} else {
+		w.WriteString(fmt.Sprintf("</%s>", name))
 	}
+
+	return ast.WalkContinue, nil
 }

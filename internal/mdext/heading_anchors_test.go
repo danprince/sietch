@@ -20,6 +20,7 @@ func TestHeadings(t *testing.T) {
 		`###### H6`:                `<a href="#h6" class="permalink"><h6 id="h6">H6</h6></a>`,
 		`# Many Words`:             `<a href="#many-words" class="permalink"><h1 id="many-words">Many Words</h1></a>`,
 		"# Collision\n# Collision": `<a href="#collision" class="permalink"><h1 id="collision">Collision</h1></a><a href="#collision-1" class="permalink"><h1 id="collision-1">Collision</h1></a>`,
+		"# [Linked](#hello)":       `<h1><a href="#hello">Linked</a></h1>`,
 	}
 
 	for input, expected := range tests {
