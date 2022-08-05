@@ -48,6 +48,7 @@ var lineByLineFileExts = map[string]bool{
 	".js":   true,
 	".css":  true,
 	".html": true,
+	".txt":  true,
 }
 
 func TestFixtures(t *testing.T) {

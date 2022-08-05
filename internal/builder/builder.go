@@ -431,11 +431,13 @@ func (b *Builder) findAssets() error {
 	}
 
 	return filepath.WalkDir(b.PublicDir, func(p string, d fs.DirEntry, err error) error {
-		file, _ := filepath.Rel(b.PublicDir, p)
+		if !d.IsDir() {
+			file, _ := filepath.Rel(b.PublicDir, p)
 
-		// We can write to assets without the mutex safely here, because we're not using
-		// goroutines for walk (at the moment).
-		b.assets[p] = file
+			// We can write to assets without the mutex safely here, because we're not using
+			// goroutines for walk (at the moment).
+			b.assets[p] = file
+		}
 
 		return err
 	})
