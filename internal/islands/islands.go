@@ -227,6 +227,12 @@ func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 		assetNames = "media/[name]-[hash]"
 	}
 
+	target := api.ESNext
+
+	if opts.Production {
+		target = api.ES2018
+	}
+
 	result := api.Build(api.BuildOptions{
 		EntryPointsAdvanced: entryPoints,
 
@@ -243,6 +249,7 @@ func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 		MinifyWhitespace:  opts.Production,
 		MinifySyntax:      opts.Production,
 		MinifyIdentifiers: opts.Production,
+		Target:            target,
 		JSXMode:           api.JSXModeAutomatic,
 		JSXImportSource:   Preact.jsxImportSource,
 		Plugins: []api.Plugin{
