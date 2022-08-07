@@ -110,7 +110,7 @@ func init() {
 func downloadWithCache(href string) (string, error) {
 	cachedModulesLock.Lock()
 	mod, ok := cachedModules[href]
-	cachedModulesLock.Unlock()
+	defer cachedModulesLock.Unlock()
 
 	if ok {
 		return mod, nil
@@ -130,11 +130,9 @@ func downloadWithCache(href string) (string, error) {
 	}
 	contents := string(out)
 
-	cachedModulesLock.Lock()
 	cachedModules[href] = contents
 	name := url.QueryEscape(href)
 	os.WriteFile(path.Join(cacheDir, name), []byte(contents), os.ModePerm)
-	cachedModulesLock.Unlock()
 
 	return contents, nil
 }
