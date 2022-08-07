@@ -1,63 +1,20 @@
 package islands
 
 import (
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
-	"path"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-func browserPagesPlugin(opts BundleOptions) api.Plugin {
-	namespace := "browser-pages"
-	filter := `\?browser`
-
-	return api.Plugin{
-		Name: "browser-pages-plugin",
-		Setup: func(build api.PluginBuild) {
-			build.OnResolve(api.OnResolveOptions{
-				Filter: filter,
-			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
-				return api.OnResolveResult{
-					Path:      args.Path,
-					Namespace: namespace,
-				}, nil
-			})
-
-			build.OnLoad(api.OnLoadOptions{
-				Filter:    `.*`,
-				Namespace: namespace,
-			}, func(args api.OnLoadArgs) (api.OnLoadResult, error) {
-				pageId := strings.ReplaceAll(args.Path, "?browser", "")
-				islands := opts.IslandsByPage[pageId]
-				contents := opts.Framework.clientEntryPoint(islands)
-				return api.OnLoadResult{
-					Contents:   &contents,
-					Loader:     api.LoaderJS,
-					ResolveDir: opts.ResolveDir,
-				}, nil
-			})
-		},
-	}
+type virtualModulesConfig struct {
+	filter  string
+	modules map[string]api.OnLoadResult
 }
 
-func virtualModulesPlugin(modules map[string]api.OnLoadResult) api.Plugin {
-	namespace := "virtual-modules"
-	names := []string{}
-
-	for name := range modules {
-		// regexp escapes
-		name = strings.ReplaceAll(name, "/", `\/`)
-		names = append(names, name)
-	}
-
-	filter := fmt.Sprintf(`^(%s)$`, strings.Join(names, "|"))
+func virtualModulesPlugin(c virtualModulesConfig) api.Plugin {
+	namespace := "virtual"
+	filter := c.filter
 
 	return api.Plugin{
 		Name: "virtual-modules-plugin",
@@ -75,146 +32,72 @@ func virtualModulesPlugin(modules map[string]api.OnLoadResult) api.Plugin {
 				Filter:    `.*`,
 				Namespace: namespace,
 			}, func(args api.OnLoadArgs) (api.OnLoadResult, error) {
-				return modules[args.Path], nil
+				return c.modules[args.Path], nil
 			})
 		},
 	}
 }
 
-var (
-	httpImportRegex     = regexp.MustCompile(`^https?://`)
-	httpImportNamespace = "http-import"
-)
+type islandsPluginOptions struct {
+	resolveDir string
+	frameworks []*Framework
+}
 
-func importMapPlugin(importMap map[string]string) api.Plugin {
-	names := []string{}
+// Plugin that transforms
+func islandsFrameworkPlugin(opts islandsPluginOptions) api.Plugin {
+	filter := `\?(static|hydrate)`
+	pattern := regexp.MustCompile(filter)
+	namespace := "islands"
 
-	for name := range importMap {
-		// regexp escapes
-		names = append(names, name)
-	}
-
-	filter := fmt.Sprintf(`^(%s)$`, strings.Join(names, "|"))
 	return api.Plugin{
-		Name: "import-map-plugin",
+		Name: "islands-framework-plugin",
 		Setup: func(build api.PluginBuild) {
 			build.OnResolve(api.OnResolveOptions{
 				Filter: filter,
 			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
-				resolved := importMap[args.Path]
-
-				if httpImportRegex.MatchString(resolved) {
-					return api.OnResolveResult{Path: resolved, Namespace: httpImportNamespace}, nil
-				} else {
-					return api.OnResolveResult{Path: resolved}, nil
-				}
-			})
-		},
-	}
-}
-
-func httpImportsPlugin() api.Plugin {
-	return api.Plugin{
-		Name: "http-imports-plugin",
-		Setup: func(build api.PluginBuild) {
-
-			// Add the http-import namespace to regular imports
-			build.OnResolve(api.OnResolveOptions{
-				Filter: httpImportRegex.String(),
-			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
+				matches := pattern.FindStringSubmatch(args.Path)
+				suffix := matches[0]
+				importUrl := strings.TrimSuffix(args.Path, suffix)
 				return api.OnResolveResult{
-					Path:      args.Path,
-					Namespace: httpImportNamespace,
+					Path:      importUrl,
+					Suffix:    suffix,
+					Namespace: namespace,
 				}, nil
 			})
 
-			// Resolve urls from inside downloaded files
-			build.OnResolve(api.OnResolveOptions{
-				Filter:    `.*`,
-				Namespace: httpImportNamespace,
-			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
-				base, err := url.Parse(args.Importer)
-
-				if err != nil {
-					return api.OnResolveResult{}, err
-				}
-
-				relative, err := url.Parse(args.Path)
-
-				if err != nil {
-					return api.OnResolveResult{}, err
-				}
-
-				return api.OnResolveResult{
-					Path:      base.ResolveReference(relative).String(),
-					Namespace: httpImportNamespace,
-				}, nil
-			})
-
-			// Load the module over http.
 			build.OnLoad(api.OnLoadOptions{
 				Filter:    `.*`,
-				Namespace: httpImportNamespace,
+				Namespace: namespace,
 			}, func(args api.OnLoadArgs) (api.OnLoadResult, error) {
-				contents, err := downloadWithCache(args.Path)
+				// Use esbuild to resolve the actual name of the file, from the path
+				// here (might have no extension, or be mapped with tsconfig etc).
+				result := build.Resolve(args.Path, api.ResolveOptions{ResolveDir: opts.resolveDir})
 
-				if err != nil {
-					return api.OnLoadResult{}, err
+				if len(result.Errors) > 0 {
+					return api.OnLoadResult{Errors: result.Errors}, nil
+				}
+
+				var framework = Vanilla
+
+				for _, f := range opts.frameworks {
+					if f.detect(result.Path) {
+						framework = f
+					}
+				}
+
+				var contents string
+				if args.Suffix == "?hydrate" {
+					contents = framework.clientEntry(args.Path)
+				} else {
+					contents = framework.staticEntry(args.Path)
 				}
 
 				return api.OnLoadResult{
 					Contents:   &contents,
-					ResolveDir: "/tmp",
+					Loader:     api.LoaderJS,
+					ResolveDir: opts.resolveDir,
 				}, nil
 			})
 		},
 	}
-}
-
-var (
-	cacheDir          = path.Join(os.TempDir(), ".sietch/http-imports")
-	cachedModules     = map[string]string{}
-	cachedModulesLock sync.Mutex
-)
-
-func init() {
-	os.MkdirAll(cacheDir, os.ModePerm)
-	dirents, _ := os.ReadDir(cacheDir)
-	for _, dirent := range dirents {
-		if !dirent.IsDir() {
-			name, _ := url.QueryUnescape(dirent.Name())
-			contents, _ := os.ReadFile(path.Join(cacheDir, dirent.Name()))
-			cachedModules[name] = string(contents)
-		}
-	}
-}
-
-func downloadWithCache(href string) (string, error) {
-	cachedModulesLock.Lock()
-	mod, ok := cachedModules[href]
-	cachedModulesLock.Unlock()
-
-	if ok {
-		return mod, nil
-	}
-
-	res, err := http.Get(href)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	out, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-	contents := string(out)
-
-	cachedModulesLock.Lock()
-	cachedModules[href] = contents
-	name := url.QueryEscape(href)
-	os.WriteFile(path.Join(cacheDir, name), []byte(contents), os.ModePerm)
-	cachedModulesLock.Unlock()
-
-	return contents, nil
 }

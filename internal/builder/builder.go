@@ -40,10 +40,9 @@ var (
 	//go:embed template.html
 	defaultTemplateHtml []byte
 
-	frameworkMap = map[string]islands.Framework{
-		islands.Vanilla.Id:      islands.Vanilla,
-		islands.Preact.Id:       islands.Preact,
-		islands.PreactRemote.Id: islands.PreactRemote,
+	frameworkMap = map[string]*islands.Framework{
+		islands.Vanilla.Id: islands.Vanilla,
+		islands.Preact.Id:  islands.Preact,
 	}
 )
 
@@ -64,7 +63,7 @@ type Builder struct {
 	assetsMu     sync.Mutex
 	index        map[string][]*Page
 	markdown     goldmark.Markdown
-	framework    islands.Framework
+	frameworks   []*islands.Framework
 	minifier     *minify.M
 	minify       bool
 }
@@ -117,10 +116,10 @@ func New(dir string, mode Mode) *Builder {
 		configFile:   path.Join(dir, ".sietch.json"),
 		config:       defaultConfig,
 		pages:        []*Page{},
+		index:        map[string][]*Page{},
 		assets:       map[string]string{},
 		assetsMu:     sync.Mutex{},
-		index:        map[string][]*Page{},
-		framework:    islands.Vanilla,
+		frameworks:   []*islands.Framework{islands.Preact, islands.Vanilla},
 		minifier:     min,
 		minify:       mode == Production,
 	}
@@ -215,8 +214,6 @@ func (b *Builder) applyConfig() error {
 	if info, err := os.Stat(b.PagesDir); err != nil || !info.IsDir() {
 		return errors.Wrap("config", err)
 	}
-
-	b.framework = frameworkMap[b.config.Framework]
 
 	b.markdown = goldmark.New(
 		goldmark.WithExtensions(
@@ -619,7 +616,7 @@ func (b *Builder) renderIslands() error {
 		Islands:    b.staticIslands(),
 		AssetsDir:  b.AssetsDir,
 		ResolveDir: b.PagesDir,
-		Framework:  b.framework,
+		Frameworks: b.frameworks,
 	})
 
 	if err != nil {
@@ -648,7 +645,7 @@ func (b *Builder) bundleIslands() error {
 	}
 
 	bundles, err := islands.Bundle(islands.BundleOptions{
-		Framework:     b.framework,
+		Frameworks:    b.frameworks,
 		IslandsByPage: islandsByPage,
 		Production:    b.Mode == Production,
 		OutDir:        b.OutDir,

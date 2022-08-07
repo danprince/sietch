@@ -57,8 +57,8 @@ func (p Props) String() string {
 }
 
 var (
-	//go:embed client/sietch-client.ts
-	sietchClientSrc string
+	//go:embed client/runtime.ts
+	sietchRuntimeSrc string
 
 	// It's significantly faster to have one isolate than to create a context for
 	// each evaluation.
@@ -68,18 +68,27 @@ var (
 type RenderOptions struct {
 	ResolveDir string
 	AssetsDir  string
-	Framework  Framework
+	Frameworks []*Framework
 	Islands    []*Island
 }
 
 // Render the islands which produce static HTML into their respective pages.
 func Render(opts RenderOptions) (map[string]string, error) {
-	code := opts.Framework.staticEntryPoint(opts.Islands)
+	sourceFile := "sietch:static"
+	code := strings.Builder{}
+
+	for _, island := range opts.Islands {
+		if !island.ClientOnly {
+			code.WriteString(fmt.Sprintf("import { render as $r%s } from '%s?static';\n", island.Id, island.EntryPoint))
+			code.WriteString(fmt.Sprintf("$elements['%s'] = $r%s(%s);", island.Id, island.Id, island.Props))
+		}
+	}
 
 	result := api.Build(api.BuildOptions{
 		Stdin: &api.StdinOptions{
-			Contents:   code,
-			Sourcefile: "server-entry.js",
+			Contents:   code.String(),
+			Sourcefile: sourceFile,
+			Loader:     api.LoaderJS,
 			ResolveDir: opts.ResolveDir,
 		},
 		Bundle:          true,
@@ -88,11 +97,14 @@ func Render(opts RenderOptions) (map[string]string, error) {
 		Platform:        api.PlatformNeutral,
 		Format:          api.FormatIIFE,
 		Sourcemap:       api.SourceMapExternal,
+		Target:          api.ES2021,
 		JSXMode:         api.JSXModeAutomatic,
-		JSXImportSource: "preact",
+		JSXImportSource: Preact.jsxImportSource,
 		Plugins: []api.Plugin{
-			importMapPlugin(opts.Framework.importMap),
-			httpImportsPlugin(),
+			islandsFrameworkPlugin(islandsPluginOptions{
+				resolveDir: opts.ResolveDir,
+				frameworks: opts.Frameworks,
+			}),
 		},
 	})
 
@@ -112,14 +124,13 @@ func Render(opts RenderOptions) (map[string]string, error) {
 		}
 	}
 
-	name := "server-entry.js"
 	script := fmt.Sprintf("globalThis.$elements = {};\n%s\n$elements", string(source))
 
 	ctx := v8go.NewContext(iso)
-	val, err := ctx.RunScript(script, name)
+	val, err := ctx.RunScript(script, sourceFile)
 
 	if err != nil {
-		return map[string]string{}, errors.V8Error(err, name, source, sourceMap, opts.AssetsDir)
+		return map[string]string{}, errors.V8Error(err, sourceFile, source, sourceMap, opts.AssetsDir)
 	}
 
 	s, err := v8go.JSONStringify(ctx, val)
@@ -139,7 +150,7 @@ func Render(opts RenderOptions) (map[string]string, error) {
 }
 
 type BundleOptions struct {
-	Framework     Framework
+	Frameworks    []*Framework
 	IslandsByPage map[string][]*Island
 	Production    bool
 	OutDir        string
@@ -157,14 +168,46 @@ type BundleResult struct {
 func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 	bundles := map[string]*BundleResult{}
 	entryPoints := []api.EntryPoint{}
+	pagesModules := map[string]api.OnLoadResult{}
 
-	for pageId := range opts.IslandsByPage {
+	for pageId, islands := range opts.IslandsByPage {
+		virtualName := fmt.Sprintf(`page:%s`, pageId)
+
 		bundles[pageId] = &BundleResult{}
 
 		entryPoints = append(entryPoints, api.EntryPoint{
-			InputPath:  fmt.Sprintf("%s?browser", pageId),
+			InputPath:  virtualName,
 			OutputPath: pageId,
 		})
+
+		sb := strings.Builder{}
+		sb.WriteString("import { onIdle, onVisible } from 'sietch:runtime';\n")
+
+		for _, island := range islands {
+			id := island.Id
+			props := island.Props
+			src := island.EntryPoint
+			el := fmt.Sprintf(`document.getElementById('%s')`, id)
+
+			switch island.Type {
+			case HydrateOnLoad:
+				sb.WriteString(fmt.Sprintf("import { hydrate as $h%s } from '%s?hydrate';\n", id, src))
+				sb.WriteString(fmt.Sprintf("$h%s(%s, %s);\n", id, props, el))
+			case HydrateOnIdle:
+				sb.WriteString(fmt.Sprintf("onIdle().then(() => import('%s?hydrate'))", src))
+				sb.WriteString(fmt.Sprintf(".then($c => $c.hydrate(%s, %s))\n", props, el))
+			case HydrateOnVisible:
+				sb.WriteString(fmt.Sprintf("onVisible(%s).then(() => import('%s?hydrate'))", el, src))
+				sb.WriteString(fmt.Sprintf(".then($c => $c.hydrate(%s, %s))\n", props, el))
+			}
+		}
+
+		contents := sb.String()
+		pagesModules[virtualName] = api.OnLoadResult{
+			Contents:   &contents,
+			ResolveDir: opts.ResolveDir,
+			Loader:     api.LoaderJS,
+		}
 	}
 
 	entryNames := "bundle-[name]-[hash]"
@@ -194,15 +237,23 @@ func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 		MinifySyntax:      opts.Production,
 		MinifyIdentifiers: opts.Production,
 		JSXMode:           api.JSXModeAutomatic,
-		JSXImportSource:   "preact",
+		JSXImportSource:   Preact.jsxImportSource,
 		Plugins: []api.Plugin{
-			browserPagesPlugin(opts),
-			importMapPlugin(opts.Framework.importMap),
-			httpImportsPlugin(),
-			virtualModulesPlugin(map[string]api.OnLoadResult{
-				"@sietch/client": {
-					Contents: &sietchClientSrc,
-					Loader:   api.LoaderTS,
+			islandsFrameworkPlugin(islandsPluginOptions{
+				frameworks: opts.Frameworks,
+				resolveDir: opts.ResolveDir,
+			}),
+			virtualModulesPlugin(virtualModulesConfig{
+				filter:  `^page:`,
+				modules: pagesModules,
+			}),
+			virtualModulesPlugin(virtualModulesConfig{
+				filter: `^sietch:`,
+				modules: map[string]api.OnLoadResult{
+					"sietch:runtime": {
+						Contents: &sietchRuntimeSrc,
+						Loader:   api.LoaderTS,
+					},
 				},
 			}),
 		},
