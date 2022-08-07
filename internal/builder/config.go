@@ -11,12 +11,14 @@ import (
 )
 
 type Config struct {
+	Npm         bool
 	SyntaxColor string
 	DateFormat  string
 	PagesDir    string
 }
 
 var defaultConfig = Config{
+	Npm:         false,
 	SyntaxColor: "algol_nu",
 	DateFormat:  "2006-1-2",
 	PagesDir:    ".",

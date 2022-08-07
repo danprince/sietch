@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/danprince/sietch/internal/errors"
+	"github.com/danprince/sietch/internal/islands/cdn"
 	"github.com/evanw/esbuild/pkg/api"
 	"rogchap.com/v8go"
 )
@@ -70,6 +71,7 @@ type RenderOptions struct {
 	AssetsDir  string
 	Frameworks []*Framework
 	Islands    []*Island
+	Npm        bool
 }
 
 // Render the islands which produce static HTML into their respective pages.
@@ -101,6 +103,7 @@ func Render(opts RenderOptions) (map[string]string, error) {
 		JSXMode:         api.JSXModeAutomatic,
 		JSXImportSource: Preact.jsxImportSource,
 		Plugins: []api.Plugin{
+			cdn.Plugin(!opts.Npm),
 			islandsFrameworkPlugin(islandsPluginOptions{
 				resolveDir: opts.ResolveDir,
 				frameworks: opts.Frameworks,
@@ -156,6 +159,7 @@ type BundleOptions struct {
 	OutDir        string
 	AssetsDir     string
 	ResolveDir    string
+	Npm           bool
 }
 
 type BundleResult struct {
@@ -239,6 +243,7 @@ func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 		JSXMode:           api.JSXModeAutomatic,
 		JSXImportSource:   Preact.jsxImportSource,
 		Plugins: []api.Plugin{
+			cdn.Plugin(!opts.Npm),
 			islandsFrameworkPlugin(islandsPluginOptions{
 				frameworks: opts.Frameworks,
 				resolveDir: opts.ResolveDir,
