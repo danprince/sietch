@@ -116,6 +116,8 @@ func downloadWithCache(href string) (string, error) {
 		return mod, nil
 	}
 
+	fmt.Printf("downloading %s \n", href)
+
 	res, err := http.Get(href)
 	if err != nil {
 		return "", err
