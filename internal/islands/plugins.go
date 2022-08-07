@@ -77,12 +77,10 @@ func islandsFrameworkPlugin(opts islandsPluginOptions) api.Plugin {
 					return api.OnLoadResult{Errors: result.Errors}, nil
 				}
 
-				var framework = Vanilla
+				framework, err := detectFramework(opts.frameworks, result.Path)
 
-				for _, f := range opts.frameworks {
-					if f.detect(result.Path) {
-						framework = f
-					}
+				if err != nil {
+					return api.OnLoadResult{}, err
 				}
 
 				var contents string

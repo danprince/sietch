@@ -6,32 +6,30 @@ import (
 )
 
 func TestFrameworkDetect(t *testing.T) {
-	type test struct {
-		framework *Framework
-		filename  string
-		detect    bool
+	frameworks := []*Framework{Preact, Vanilla}
+
+	tests := map[string]*Framework{
+		"explicit.preact.tsx": Preact,
+		"explicit.preact.jsx": Preact,
+		"explicit.preact.ts":  Preact,
+		"explicit.preact.js":  Preact,
+		"implicit.tsx":        Preact,
+		"explicit.jsx":        Preact,
+		"wrong.preact.css":    nil,
+
+		"explicit.vanilla.tsx": Vanilla,
+		"explicit.vanilla.jsx": Vanilla,
+		"explicit.vanilla.ts":  Vanilla,
+		"explicit.vanilla.js":  Vanilla,
+		"implicit.ts":          Vanilla,
+		"implicit.js":          Vanilla,
+		"wrong.vanilla.css":    nil,
 	}
 
-	tests := []test{
-		{Preact, "explicit.preact.tsx", true},
-		{Preact, "explicit.preact.jsx", true},
-		{Preact, "implicit.tsx", true},
-		{Preact, "implicit.jsx", true},
-		{Preact, "plain.js", false},
-		{Preact, "plain.ts", false},
-		{Preact, "wrong.css", false},
-
-		{Vanilla, "explicit.vanilla.ts", true},
-		{Vanilla, "explicit.vanilla.js", true},
-		{Vanilla, "implicit.ts", true},
-		{Vanilla, "implicit.js", true},
-		{Vanilla, "wrong.css", false},
-	}
-
-	for _, test := range tests {
-		ok := test.framework.detect(test.filename)
-		if ok != test.detect {
-			t.Errorf("expected %s to detect %s as %v", test.framework.Id, test.filename, test.detect)
+	for importName, expected := range tests {
+		actual, _ := detectFramework(frameworks, importName)
+		if actual != expected {
+			t.Errorf("expected to detect %s as %s, not %s", importName, expected.Id, actual.Id)
 		}
 	}
 }
