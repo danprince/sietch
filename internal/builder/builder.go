@@ -618,6 +618,7 @@ func (b *Builder) renderIslands() error {
 		ResolveDir: b.PagesDir,
 		Frameworks: b.frameworks,
 		Npm:        b.config.Npm,
+		ImportMap:  b.config.ImportMap,
 	})
 
 	if err != nil {
@@ -653,6 +654,7 @@ func (b *Builder) bundleIslands() error {
 		AssetsDir:     b.AssetsDir,
 		ResolveDir:    b.PagesDir,
 		Npm:           b.config.Npm,
+		ImportMap:     b.config.ImportMap,
 	})
 
 	if err != nil {

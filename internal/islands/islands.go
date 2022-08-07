@@ -72,6 +72,7 @@ type RenderOptions struct {
 	Frameworks []*Framework
 	Islands    []*Island
 	Npm        bool
+	ImportMap  map[string]string
 }
 
 // Render the islands which produce static HTML into their respective pages.
@@ -103,6 +104,7 @@ func Render(opts RenderOptions) (map[string]string, error) {
 		JSXMode:         api.JSXModeAutomatic,
 		JSXImportSource: Preact.jsxImportSource,
 		Plugins: []api.Plugin{
+			importMapPlugin(opts.ImportMap),
 			cdn.Plugin(!opts.Npm),
 			islandsFrameworkPlugin(islandsPluginOptions{
 				resolveDir: opts.ResolveDir,
@@ -160,6 +162,7 @@ type BundleOptions struct {
 	AssetsDir     string
 	ResolveDir    string
 	Npm           bool
+	ImportMap     map[string]string
 }
 
 type BundleResult struct {
@@ -243,6 +246,7 @@ func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 		JSXMode:           api.JSXModeAutomatic,
 		JSXImportSource:   Preact.jsxImportSource,
 		Plugins: []api.Plugin{
+			importMapPlugin(opts.ImportMap),
 			cdn.Plugin(!opts.Npm),
 			islandsFrameworkPlugin(islandsPluginOptions{
 				frameworks: opts.Frameworks,

@@ -15,6 +15,7 @@ type Config struct {
 	SyntaxColor string
 	DateFormat  string
 	PagesDir    string
+	ImportMap   map[string]string
 }
 
 var defaultConfig = Config{
@@ -22,6 +23,7 @@ var defaultConfig = Config{
 	SyntaxColor: "algol_nu",
 	DateFormat:  "2006-1-2",
 	PagesDir:    ".",
+	ImportMap:   map[string]string{},
 }
 
 func (c *Config) load(file string) error {
