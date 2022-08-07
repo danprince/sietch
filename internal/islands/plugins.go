@@ -1,6 +1,7 @@
 package islands
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -94,6 +95,44 @@ func islandsFrameworkPlugin(opts islandsPluginOptions) api.Plugin {
 					Contents:   &contents,
 					Loader:     api.LoaderJS,
 					ResolveDir: opts.resolveDir,
+				}, nil
+			})
+		},
+	}
+}
+
+func importMapPlugin(importMap map[string]string) api.Plugin {
+	filters := []string{}
+
+	for name := range importMap {
+		name = strings.ReplaceAll(name, `/`, `\/`)
+		filters = append(filters, fmt.Sprintf(`^%s$`, name))
+	}
+
+	filter := "(" + strings.Join(filters, "|") + ")"
+
+	return api.Plugin{
+		Name: "import-maps",
+		Setup: func(build api.PluginBuild) {
+			// No need to register resolvers/loaders if the import map is empty
+			// (it will be by default).
+			if len(importMap) == 0 {
+				return
+			}
+
+			build.OnResolve(api.OnResolveOptions{
+				Filter: filter,
+			}, func(args api.OnResolveArgs) (api.OnResolveResult, error) {
+				mapped := importMap[args.Path]
+				resolve := build.Resolve(mapped, api.ResolveOptions{})
+
+				if len(resolve.Errors) > 0 {
+					return api.OnResolveResult{Errors: resolve.Errors}, nil
+				}
+
+				return api.OnResolveResult{
+					Path:      resolve.Path,
+					Namespace: resolve.Namespace,
 				}, nil
 			})
 		},
