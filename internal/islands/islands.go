@@ -61,6 +61,9 @@ var (
 	//go:embed client/runtime.ts
 	sietchRuntimeSrc string
 
+	//go:embed client/jsx.ts
+	sietchJsxSrc string
+
 	// It's significantly faster to have one isolate than to create a context for
 	// each evaluation.
 	iso = v8go.NewIsolate()
@@ -107,6 +110,15 @@ func Render(opts RenderOptions) (map[string]string, error) {
 			islandsFrameworkPlugin(islandsPluginOptions{
 				resolveDir: opts.ResolveDir,
 				frameworks: opts.Frameworks,
+			}),
+			virtualModulesPlugin(virtualModulesConfig{
+				filter: `^sietch:`,
+				modules: map[string]api.OnLoadResult{
+					"sietch:jsx/jsx-runtime": {
+						Contents: &sietchJsxSrc,
+						Loader:   api.LoaderTS,
+					},
+				},
 			}),
 		},
 	})
@@ -255,6 +267,10 @@ func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 			virtualModulesPlugin(virtualModulesConfig{
 				filter: `^sietch:`,
 				modules: map[string]api.OnLoadResult{
+					"sietch:jsx/jsx-runtime": {
+						Contents: &sietchJsxSrc,
+						Loader:   api.LoaderTS,
+					},
 					"sietch:runtime": {
 						Contents: &sietchRuntimeSrc,
 						Loader:   api.LoaderTS,
