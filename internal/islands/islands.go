@@ -163,6 +163,7 @@ type BundleOptions struct {
 	ResolveDir    string
 	Npm           bool
 	ImportMap     map[string]string
+	Fingerprint   bool
 }
 
 type BundleResult struct {
@@ -217,14 +218,13 @@ func Bundle(opts BundleOptions) (map[string]*BundleResult, error) {
 		}
 	}
 
-	entryNames := "bundle-[name]-[hash]"
+	entryNames := "bundle-[name]"
+	assetNames := "media/[name]"
 	chunkNames := "chunk-[hash]"
-	assetNames := "media/[name]-[hash]"
 
-	if !opts.Production {
-		// Remove hashes in development to prevent ending up with hundreds of
-		// versions of the file in the assets dir.
-		entryNames = "bundle-[name]"
+	if opts.Fingerprint {
+		entryNames = "bundle-[name]-[hash]"
+		assetNames = "media/[name]-[hash]"
 	}
 
 	result := api.Build(api.BuildOptions{

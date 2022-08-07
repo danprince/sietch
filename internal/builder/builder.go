@@ -65,6 +65,7 @@ type Builder struct {
 	markdown     goldmark.Markdown
 	frameworks   []*islands.Framework
 	minifier     *minify.M
+	fingerprint  bool
 	minify       bool
 }
 
@@ -122,6 +123,7 @@ func New(dir string, mode Mode) *Builder {
 		frameworks:   []*islands.Framework{islands.Preact, islands.Vanilla},
 		minifier:     min,
 		minify:       mode == Production,
+		fingerprint:  mode == Production,
 	}
 }
 

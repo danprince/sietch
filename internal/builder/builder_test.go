@@ -90,8 +90,12 @@ func TestFixtures(t *testing.T) {
 
 			builder := New(inputDir, Production)
 			builder.OutDir = actualDir
+
 			// Disable minification in tests to keep the output readable
 			builder.minify = false
+
+			// Disable fingerprinting to keep the output stable
+			builder.fingerprint = false
 
 			if _, err := os.Stat(templateFile); err != nil {
 				// If there wasn't a template file in the dir, use the default one for
