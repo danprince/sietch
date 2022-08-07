@@ -12,14 +12,12 @@ import (
 
 type Config struct {
 	SyntaxColor string
-	Framework   string
 	DateFormat  string
 	PagesDir    string
 }
 
 var defaultConfig = Config{
 	SyntaxColor: "algol_nu",
-	Framework:   "vanilla",
 	DateFormat:  "2006-1-2",
 	PagesDir:    ".",
 }
@@ -35,21 +33,6 @@ func (c *Config) load(file string) error {
 
 	if err != nil {
 		return errors.JsonParseError(err, file, string(data))
-	}
-
-	if _, ok := frameworkMap[c.Framework]; !ok {
-		allowed := []string{}
-
-		for s := range frameworkMap {
-			allowed = append(allowed, s)
-		}
-
-		return errors.ConfigError{
-			File:    file,
-			Key:     "Framework",
-			Value:   c.Framework,
-			Allowed: allowed,
-		}
 	}
 
 	// The "css" theme isn't part of chroma, but we use it to enable the

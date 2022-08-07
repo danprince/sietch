@@ -1,13 +1,87 @@
 package islands
 
 import (
-	"os"
-	"path"
 	"strings"
 	"testing"
 )
 
+func TestFrameworkDetect(t *testing.T) {
+	frameworks := []*Framework{Preact, Vanilla}
+
+	tests := map[string]*Framework{
+		"explicit.preact.tsx": Preact,
+		"explicit.preact.jsx": Preact,
+		"explicit.preact.ts":  Preact,
+		"explicit.preact.js":  Preact,
+		"implicit.tsx":        Preact,
+		"explicit.jsx":        Preact,
+		"wrong.preact.css":    nil,
+
+		"explicit.vanilla.tsx": Vanilla,
+		"explicit.vanilla.jsx": Vanilla,
+		"explicit.vanilla.ts":  Vanilla,
+		"explicit.vanilla.js":  Vanilla,
+		"implicit.ts":          Vanilla,
+		"implicit.js":          Vanilla,
+		"wrong.vanilla.css":    nil,
+	}
+
+	for importName, expected := range tests {
+		actual, _ := detectFramework(frameworks, importName)
+		if actual != expected {
+			t.Errorf("expected to detect %s as %s, not %s", importName, expected.Id, actual.Id)
+		}
+	}
+}
+
+func TestFrameworkOutputs(t *testing.T) {
+	type test struct {
+		framework *Framework
+		filename  string
+		client    string
+		static    string
+	}
+
+	tests := []test{
+		{
+			framework: Vanilla,
+			filename:  "./counter.ts",
+			client:    `export { hydrate } from "./counter.ts";`,
+			static:    `export { render } from "./counter.ts";`,
+		},
+		{
+			framework: Preact,
+			filename:  "./counter.tsx",
+			client: `
+import { h, hydrate as _hydrate } from "preact";
+import Component from "./counter.tsx";
+
+export function hydrate(props, element) {
+	return _hydrate(h(Component, props), element);
+}
+`,
+			static: `import { h } from "preact";
+import { render as _render } from "preact-render-to-string";
+import Component from "./counter.tsx";
+
+export function render(props, element) {
+	return _render(h(Component, props));
+}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.framework.Id, func(t *testing.T) {
+			clientEntry := test.framework.clientEntry(test.filename)
+			staticEntry := test.framework.staticEntry(test.filename)
+			compareStrings(t, test.client, clientEntry)
+			compareStrings(t, test.static, staticEntry)
+		})
+	}
+}
+
 func compareStrings(t *testing.T, expect, actual string) {
+	t.Helper()
 	expect = strings.Trim(expect, "\n ")
 	actual = strings.Trim(actual, "\n ")
 
@@ -26,46 +100,5 @@ func compareStrings(t *testing.T, expect, actual string) {
 expect: %s
 actual: %s`, index+1, expectLine, actualLine)
 		}
-	}
-}
-
-func TestFrameworkClients(t *testing.T) {
-	islands := []*Island{
-		{Id: "a", EntryPoint: "./Counter.tsx", Props: Props{"count": 1}, Type: HydrateOnLoad},
-		{Id: "b", EntryPoint: "./Counter.tsx", Props: Props{"count": 3}, Type: HydrateOnIdle},
-		{Id: "c", EntryPoint: "../Timer.tsx", Props: Props{}, Type: HydrateOnVisible},
-	}
-
-	tests := []Framework{Vanilla, Preact}
-	cwd, _ := os.Getwd()
-
-	for _, framework := range tests {
-		t.Run(framework.Id+"-client", func(t *testing.T) {
-			filename := path.Join(cwd, "testdata", framework.Id+"-client.js")
-			data, err := os.ReadFile(filename)
-
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			expect := string(data)
-			actual := framework.clientEntryPoint(islands)
-			compareStrings(t, expect, actual)
-		})
-	}
-
-	for _, framework := range tests {
-		t.Run(framework.Id+"-static", func(t *testing.T) {
-			filename := path.Join(cwd, "testdata", framework.Id+"-static.js")
-			data, err := os.ReadFile(filename)
-
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			expect := string(data)
-			actual := framework.staticEntryPoint(islands)
-			compareStrings(t, expect, actual)
-		})
 	}
 }
