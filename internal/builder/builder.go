@@ -40,6 +40,9 @@ var (
 	//go:embed template.html
 	defaultTemplateHtml []byte
 
+	//go:embed template.css
+	defaultTemplateCss string
+
 	frameworkMap = map[string]*islands.Framework{
 		islands.Vanilla.Id: islands.Vanilla,
 		islands.Preact.Id:  islands.Preact,
@@ -358,6 +361,9 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 		"clientOnly": func(island *islands.Island) *islands.Island {
 			island.ClientOnly = true
 			return island
+		},
+		"defaultStyles": func() string {
+			return defaultTemplateCss
 		},
 	}
 }
