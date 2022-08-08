@@ -1,0 +1,7 @@
+[build]
+  base = "docs/"
+  publish = "_site"
+  command = "go run .."
+
+[build.environment]
+  GO_VERSION = "1.18"
