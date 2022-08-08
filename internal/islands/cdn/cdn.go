@@ -124,8 +124,6 @@ func downloadWithCache(href string) (string, error) {
 	}
 	defer res.Body.Close()
 
-	fmt.Println(res.Header.Get("X-TypeScript-Types"))
-
 	out, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
