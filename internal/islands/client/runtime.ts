@@ -1,6 +1,10 @@
 export function onIdle(): Promise<void> {
   return new Promise(resolve => {
-    requestIdleCallback(() => resolve());
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(() => resolve());
+    } else {
+      setTimeout(() => resolve(), 200);
+    }
   })
 }
 

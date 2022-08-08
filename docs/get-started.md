@@ -3,10 +3,11 @@ title: Get Started
 nav: 1
 ---
 
-Start by installing Sietch.
+Start by installing Sietch (currently this has a prerequisite on having Go installed).
 
 ```sh
-# TODO
+# TODO: Update when there are cross platform binaries available
+go install github.com/danprince/sietch
 ```
 
 Create a new directory for your site and add an `index.md` file like the one below.
@@ -67,13 +68,7 @@ Note that the button was still rendered at build time, so browsers with slow con
 If you take a peek at the bundle we're sending to the client now, you'll notice that we aren't shipping the `render` function to the client, because it isn't used.
 
 ## Preact
-You can also use [Preact](https://preactjs.com/) for your islands. Create a `.sietch.json` file that sets the framework.
-
-```json
-{
-  "Framework": "preact-remote"
-}
-```
+You can also use [Preact](https://preactjs.com/) for your islands.
 
 Now rename the `counter.ts` to `counter.tsx` and update the code to work with Preact.
 
@@ -83,7 +78,7 @@ Now rename the `counter.ts` to `counter.tsx` and update the code to work with Pr
 
 Now your island is powered by Preact.
 
-Why `preact-remote`? This means we'll install the `preact` dependency from a CDN ([esm.sh](https://esm.sh/)), rather than from a `node_modules` folder. This approach is what allows Sietch to work without node or npm installed.
+{{ component "./snippets/counter.tsx" (props "count" 0) | hydrate }}
 
 ## What Next?
-Check out the [islands reference](./reference/islands.md) for more information on using islands and integrating component libraries like [Preact](https://preactjs.com).
+Check out the [islands reference](./reference/islands.md) for more information on using islands and writing components.
