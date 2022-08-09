@@ -245,6 +245,7 @@ func (b *Builder) addAsset(file string) string {
 	}
 
 	url, _ := filepath.Rel(b.PagesDir, file)
+	url = path.Join("/", url)
 	b.assets[file] = url
 	return url
 }
