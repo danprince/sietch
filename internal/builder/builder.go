@@ -255,7 +255,9 @@ func (b *Builder) templateFuncs(page *Page) template.FuncMap {
 	return template.FuncMap{
 		"url": func(src string) string {
 			file := path.Join(b.PagesDir, page.Dir, src)
-			return b.addAsset(file)
+			absPath := b.addAsset(file)
+			relPath, _ := filepath.Rel(page.Dir, absPath)
+			return relPath
 		},
 		"embed": func(src string) string {
 			file := path.Join(path.Dir(page.inputPath), src)
