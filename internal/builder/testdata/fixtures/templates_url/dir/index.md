@@ -1,1 +1,1 @@
-{{ url "hello.txt" }}
+{{ url "/dir/hello.txt" }}
