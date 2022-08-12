@@ -143,11 +143,11 @@ func TestFixtures(t *testing.T) {
 				actualInfo, err := os.Stat(actualPath)
 
 				if err != nil {
-					t.Error(err)
+					t.Fatal(err)
 				}
 
 				if d.IsDir() && !actualInfo.IsDir() {
-					t.Errorf("expected %s to be a dir", actualPath)
+					t.Fatalf("expected %s to be a dir", actualPath)
 				}
 
 				if d.IsDir() && actualInfo.IsDir() {
@@ -157,13 +157,13 @@ func TestFixtures(t *testing.T) {
 				expectContents, err := os.ReadFile(expectPath)
 
 				if err != nil {
-					t.Error(err)
+					t.Fatal(err)
 				}
 
 				actualContents, err := os.ReadFile(actualPath)
 
 				if err != nil {
-					t.Error(err)
+					t.Fatal(err)
 				}
 
 				ext := path.Ext(expectPath)

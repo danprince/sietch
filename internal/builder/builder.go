@@ -245,6 +245,7 @@ func (b *Builder) addAsset(file string) string {
 	}
 
 	url, _ := filepath.Rel(b.PagesDir, file)
+	url = path.Join("/", url)
 	b.assets[file] = url
 	return url
 }
@@ -460,6 +461,12 @@ func (b *Builder) addPage(relPath string) {
 	name := path.Base(relPath)
 	dir := path.Dir(relPath)
 	out := strings.Replace(relPath, ".md", ".html", 1)
+
+	// Keep paths clean by building each page into its own dir with as index.html
+	if !strings.HasSuffix(out, "index.html") {
+		out = strings.Replace(out, ".html", "/index.html", 1)
+	}
+
 	url := strings.Replace(out, "index.html", "", 1)
 	inputPath := path.Join(b.PagesDir, relPath)
 	outputPath := path.Join(b.OutDir, out)
@@ -727,7 +734,7 @@ func (b *Builder) minifyPage(p *Page) error {
 // Writes all files in the site into the output directory.
 func (b *Builder) writeFiles() error {
 	for _, page := range b.pages {
-		dir := path.Join(b.OutDir, page.Dir)
+		dir := path.Dir(page.outputPath)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
